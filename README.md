@@ -1,53 +1,60 @@
-# 00Z
+# 00Z — The ZEN Agent
 
-**Experimental local ZEN agent template for Pi and Claude, focused on security gates, reasoning, pipelines, memory, and structured AI workflows.**
+![00Z logo](assets/00z-logo.png)
 
-> Status: **experimental** · **not production-ready** · local-first · security-first
+**Experimental local harness template for structured AI-agent workflows with Claude and pi-agent.**
 
-00Z is an early Agent-Orchestration/Harness concept. It is designed as a configurable template for building safer AI-agent workflows with explicit validation gates, structured reasoning, memory concepts, and pipeline boundaries.
+[![Status](https://img.shields.io/badge/status-experimental-orange)](docs/readiness.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Language](https://img.shields.io/badge/lang-Python%20%2F%20YAML-green)](docs/architecture.md)
 
-It is **not** a finished Agent OS, not a production runtime, and not an API/connector platform.
+## In short
+
+00Z is a **security-first, local-first** agent harness template. It brings **gates, prompts, memory models, and pipeline flow** into one coherent structure so you can prototype and study AI-agent orchestration without switching to a production runtime.
+
+> ⚠️ This is an **experimental** project. It is intentionally conservative and not production software.
 
 ## Why 00Z exists
 
-AI-agent projects can quickly become hard to reason about: prompts, memory, tools, permissions, pipelines, and safety rules often live in different places or are not validated at all.
+AI-agent projects often combine prompts, permissions, tools, and runtime rules in many places.
+That makes them hard to reason about and easy to misconfigure.
 
-00Z explores a stricter structure:
+00Z makes these parts explicit and inspectable:
 
-- define agent behavior in readable Markdown/YAML artifacts
-- keep safety boundaries explicit
-- validate configuration before mutation
-- separate planning, execution, memory, and release readiness
-- support Pi and Claude oriented workflows without pretending to be a complete runtime
+- declarative behavior in Markdown/YAML artifacts
+- explicit safety boundaries (filesystem, prompts, secrets, tools, policies)
+- validation before mutation
+- separated planning, execution, memory, and release-readiness phases
+- lightweight adapter integration for Claude and pi-agent workflows
 
-The name **00Z** means: a ZEN-style agent template you can adapt for yourself — inspired by the idea of a configurable agent framework rather than a fixed product.
+## What 00Z is **not**
+
+- A finished Agent OS
+- A production API/connector platform
+- A native runtime that executes live destructive writes by default
+- An automatic deployment or GitHub publishing pipeline
 
 ## Current capabilities
 
-- YAML-first harness configuration
-- Markdown-based agent and prompt specifications
-- Pi/Claude adapter structure
-- 5-layer memory concept
-- dynamic reasoning and pipeline model
-- security, placeholder, filesystem, prompt-injection, and policy gates
-- non-destructive local validation tools
-- explicit write-boundary design: productive writes remain disabled until separate gates and human confirmation exist
+- **YAML-first harness** with machine-readable schemas
+- **Agent and prompt templates** in Markdown
+- **Pi and Claude adapter layer**
+- **5-layer memory** concept
+- reasoning + pipeline model for structured workflows
+- local validation tooling (no destructive defaults)
+- explicit write-boundary design (`productive writes` stay disabled until explicit approval)
 
-## Quickstart: validation demo
+## Quick start
 
-The strongest first demo is the local validation gate.
-
-Requirements:
-
-- Python 3.10+
-- run from the repository root
-- no dependency installation required for the basic demo
+From repository root:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_validate.py --check-only
 ```
 
-Typical output shape:
+If this is green, your core local safety checks are passing.
+
+Typical output:
 
 ```text
 ZEN VALIDATE: PASS
@@ -55,29 +62,13 @@ Mode: check-only/no-write
 Summary: PASS=... WARN=... FAIL=0
 ```
 
-Important nuance:
-
-- `FAIL=0` is the main success condition
-- `WARN` can still appear in minimal environments
-- optional libraries can affect validation depth
-
-`--check-only` is intentionally read-only/no-write. It does not generate reports and is the safest way to inspect the current harness state.
-
-For the supported first-release setup path, see [`docs/getting-started.md`](docs/getting-started.md).
-
-## Optional onboarding preview
-
-For a read-only orientation flow:
+### Optional: read-only orientation
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_onboarding.py --linear --no-color
 ```
 
-This is a local helper only. It does not activate a native Pi or Claude runtime.
-
-## Example workflow
-
-A typical local workflow is:
+## Typical workflow
 
 ```text
 Read docs/welcome.md
@@ -85,10 +76,24 @@ Read docs/welcome.md
 → inspect readiness/status docs
 → plan changes
 → keep mutation gated
-→ snapshot/handoff only after explicit review
+→ run explicit snapshot/handoff after review
 ```
 
-Core commands and concepts are documented in:
+## Project structure
+
+```text
+core/          identity, orchestrator, boot protocol
+harness/       policies, schemas, pipelines, commands
+adapters/      Pi and Claude integration placeholders
+agents/        system agents and templates
+prompts/       prompt templates and snapshots
+kontext/       memory and reasoning artifacts
+validation/    gate definitions, fixtures, reports
+tools/         local validators and smoke tests
+docs/          public and operator documentation
+```
+
+## Core docs
 
 - [`docs/getting-started.md`](docs/getting-started.md)
 - [`docs/welcome.md`](docs/welcome.md)
@@ -98,52 +103,41 @@ Core commands and concepts are documented in:
 
 ## Safety boundaries
 
-00Z is intentionally conservative.
-
-Current boundaries:
-
-- no production-ready runtime claim
-- no native Pi/Claude runtime activation claim
-- no API/connector platform claim
-- no automatic dependency installation
-- no automatic GitHub, deployment, or publish flow
-- no reading or writing real `.env` secrets
-- productive project writes remain disabled unless future gates, explicit human approval, and audit mechanisms are implemented
-
-## Project structure
-
-```text
-core/          identity, orchestrator, boot protocol
-harness/       machine-readable configuration, policies, schemas
-adapters/      Pi and Claude adapter structure
-agents/        system agents and templates
-prompts/       prompt templates and snapshots
-kontext/       memory and reasoning artifacts
-validation/    gate definitions, fixtures, reports
-tools/         local validation and smoke-test utilities
-docs/          public and operator documentation
-```
+- No production-ready runtime claims
+- No native Pi/Claude runtime activation
+- No API/connector platform claims
+- No automatic dependency installation
+- No `.env` secret read/write behavior
+- No built-in GitHub/deploy publishing flow
+- Productive writes require explicit gates and human confirmation
 
 ## Release posture
 
-The first public GitHub release is intended as an **experimental** release.
-
-See:
+This repository is documented as an **experimental local release**. For current status, see:
 
 - [`docs/release-status.md`](docs/release-status.md)
 - [`docs/readiness.md`](docs/readiness.md)
 
-## Who this is for
+## Who it is for
 
-00Z is currently most useful for:
-
-- developers exploring AI-agent architecture
-- people interested in safer local AI workflows
-- reviewers looking at early-stage agent orchestration design
-- builders who want to study gates, memory concepts, and structured prompt/harness design
-
-It is also part of a learning journey: the project is intentionally public-facing, but still experimental and evolving.
+- people exploring AI-agent architecture
+- developers who want safer local AI workflows
+- reviewers and learners looking at gate-based design
+- builders creating their own harness templates
 
 ## License
 
 00Z is licensed under the [MIT License](LICENSE).
+
+## About the name
+
+`00Z` is short for **The ZEN Agent**: a compact, configurable template you can adapt to your own agent workflow.
+
+## Logo optional guide
+
+To use or replace the logo in README:
+
+1. place the final image at `assets/00z-logo.png`
+2. keep the line `![00Z logo](assets/00z-logo.png)`
+3. use a wide, high-contrast format for the GitHub README header
+
