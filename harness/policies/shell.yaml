@@ -1,0 +1,34 @@
+policy: shell
+version: "1.0"
+status: active
+principle: shell_is_exception_not_default
+
+default: deny
+
+deny:
+  commands: [rm, sudo, su, dd, chmod, chown, curl, wget, mkfs, nc, netcat, ssh, scp, rsync]
+  patterns:
+    - "(^|[;&|`$()])\\s*rm\\b"
+    - "\\bsudo\\b"
+    - "\\bfind\\b.*\\s-delete\\b"
+    - "\\bpython\\s+-c\\b"
+    - "\\bnode\\s+-e\\b"
+    - "\\bperl\\s+-e\\b"
+    - "\\b(sh|bash)\\s+-c\\b"
+  shell_features: [pipes, redirects, command_substitution, subshells, background_execution]
+
+confirmation_required:
+  commands: [mv, cp, git]
+  risk_levels: [medium, high, critical]
+
+allow_readonly:
+  commands: [ls, pwd, grep, find]
+  constraints:
+    - no_redirects
+    - no_exec
+    - no_delete_flags
+    - paths_must_pass_filesystem_gate
+
+on_violation:
+  status: BLOCKED
+  message: "Shell command blocked by harness/policies/shell.yaml"

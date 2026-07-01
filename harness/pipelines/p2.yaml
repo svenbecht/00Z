@@ -1,0 +1,79 @@
+id: p2
+name: P2 Prompt Brief
+version: 0.2.0
+status: active
+trigger: ZEN P2
+routing_state_transition: IDLE -> PIPELINE -> DONE -> IDLE
+run_state_transition:
+  start_from: [READY_READONLY, READY_MUTATING]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+run_state_semantics:
+  default_mode: context_handoff_no_write
+  mutation_allowed: explicit_confirmation_only
+  mutation_requires_state: READY_MUTATING
+purpose: Einen strukturierten, auditierten Prompt Brief für genau einen Ziel-Agenten erstellen.
+
+constraints:
+  max_agents: 1
+  max_rework_cycles: 1
+  force_gate: false
+  write_mode: context_handoff_by_default
+  security_gates: [policy_gate, secret_gate, filesystem_gate, prompt_injection_gate]
+
+routing:
+  use_when:
+    - ein klar definierter Task für einen Agenten vorliegt
+    - Output-Format, Constraints und Erfolgskriterium explizit sein müssen
+  escalate_to_p3_when:
+    - mehr als ein Agent nötig ist
+    - finale Validierung vor Persistenz nötig ist
+    - Task-Abhängigkeiten oder Parallelisierung relevant sind
+
+inputs:
+  required:
+    - user_request
+    - active_project_or_scope
+  optional:
+    - target_agent_hint
+    - output_format_hint
+
+steps:
+  - id: intake
+    actor: orchestrator
+    action: Ziel, Kontext, Constraints, Output und Erfolgskriterium normalisieren.
+    output: brief_inputs
+  - id: create_brief
+    actor: orchestrator
+    template: prompts/templates/prompt_template.md
+    action: Prompt Brief mit fortlaufender Nummer erzeugen.
+    output: prompt_brief
+  - id: choose_agent
+    actor: user
+    action: Ziel-Agent aus agents/system oder Projektagenten bestätigen lassen.
+    output: selected_agent
+  - id: handoff
+    actor: selected_agent
+    action: Brief im Kontext übergeben; keine Datei schreiben, sofern nicht explizit bestätigt.
+    output: agent_result
+  - id: closeout
+    actor: orchestrator
+    action: Ergebnis, Evidenz, Risiken und optionalen nächsten Schritt zusammenfassen.
+    output: p2_summary
+
+brief_contract:
+  version: 2
+  required_sections: [Ziel, Nicht-Ziele, Scope, Trusted Constraints, Untrusted Context, Input / Evidence, Files Read, Files To Modify, Forbidden Paths, Allowed Tools, Expected Output, Validation Commands, Reasoning Contract, Reviewer Requirements, Rollback Plan, Handoff Status]
+  require_trust_separation: true
+  allowed_handoff_status: [draft, ready, blocked, needs_user]
+  required_ready_status_for_handoff: ready
+  numbering: monotonic_per_session
+  persistence_default: none
+
+artifact_policy:
+  default: no_file_write
+  allowed_after_confirmation:
+    - projects/*/briefs/*.md
+    - projects/*/state.md

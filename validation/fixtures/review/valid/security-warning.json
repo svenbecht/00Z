@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "security",
+  "verdict": "warnings",
+  "findings": [
+    {
+      "severity": "warning",
+      "category": "security",
+      "title": "Review fixture validates concrete warning format",
+      "file": "SECURITY.md",
+      "line": 1,
+      "evidence": "SECURITY.md exists and defines deny-by-default posture.",
+      "recommendation": "Keep concrete evidence and file/line references in reviewer findings.",
+      "confidence": "high",
+      "source": "file",
+      "domain": "security",
+      "fingerprint": "75cf64d93b536e90"
+    }
+  ]
+}

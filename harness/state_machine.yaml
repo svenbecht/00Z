@@ -1,0 +1,57 @@
+version: "1.1"
+authority: trigger_source_of_truth
+sync_targets:
+  - core/ORCHESTRATOR.md
+  - agents/agent_registry.yaml
+  - adapters/pi/adapter.yaml
+  - adapters/claude/adapter.yaml
+run_state_model:
+  authority: runtime_lifecycle_source
+  states:
+    INIT_REQUIRED: "Pflichtdateien oder Initialisierung fehlen; nur read/validate/plan."
+    CONFIG_INCOMPLETE: "Konfiguration vorhanden, aber Gates oder Referenzen sind unvollständig; keine Mutation."
+    READY_READONLY: "Onboarding/Policies ausreichend für Lesen, Prüfen und Planen; keine Persistenz außer Validator-Reports."
+    READY_MUTATING: "Alle Pflicht-Gates PASS und User-Kontext erlaubt mutierende Tools gemäß Policy."
+    VALIDATING: "ZEN VALIDATE läuft; Normalmodus darf nur redigierte Reports schreiben, check-only schreibt nichts."
+    RUNNING: "Command oder P1/P2/P3 läuft innerhalb der erlaubten Gates."
+    BLOCKED: "Policy-, Gate-, Secret-, Prompt-Injection- oder HITL-Blockade."
+    DONE: "Run abgeschlossen und ggf. approved persistiert."
+    FAILED: "Run technisch oder fachlich fehlgeschlagen; keine weitere Mutation ohne Review."
+  initial: INIT_REQUIRED
+  readonly_states: [INIT_REQUIRED, CONFIG_INCOMPLETE, READY_READONLY, VALIDATING, BLOCKED, FAILED]
+  mutating_state: READY_MUTATING
+  terminal_states: [DONE, BLOCKED, FAILED]
+  gates:
+    onboarding_to_ready_readonly: [required_files_exist, onboarding_guide_read, placeholder_gate, policy_gate, adapter_gate]
+    ready_readonly_to_ready_mutating: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate, user_confirmation_if_required]
+    validating_to_ready_readonly: [zen_validate_pass_or_warn]
+    validating_to_blocked: [zen_validate_fail]
+    running_to_done: [command_success, pipeline_gate_pass]
+    running_to_blocked: [policy_or_security_block]
+    running_to_failed: [runtime_error_or_unresolved_required_input]
+  transitions:
+    - { event: boot_missing_required_config, from: "*", to: INIT_REQUIRED }
+    - { event: config_detected_but_incomplete, from: INIT_REQUIRED, to: CONFIG_INCOMPLETE }
+    - { event: onboarding_gates_pass_readonly, from: [INIT_REQUIRED, CONFIG_INCOMPLETE, BLOCKED], to: READY_READONLY }
+    - { event: mutation_gates_pass, from: READY_READONLY, to: READY_MUTATING }
+    - { event: zen_validate_start, from: "*", to: VALIDATING }
+    - { event: zen_validate_pass_or_warn, from: VALIDATING, to: READY_READONLY }
+    - { event: zen_validate_fail, from: VALIDATING, to: BLOCKED }
+    - { event: command_or_pipeline_start, from: [READY_READONLY, READY_MUTATING], to: RUNNING }
+    - { event: command_or_pipeline_done, from: RUNNING, to: DONE }
+    - { event: policy_block, from: "*", to: BLOCKED }
+    - { event: runtime_failure, from: [VALIDATING, RUNNING], to: FAILED }
+    - { event: reset_to_readonly, from: [DONE, FAILED, BLOCKED], to: READY_READONLY }
+states: [IDLE, SETUP, MEMORY_INIT, BUILD, PIPELINE, P3_PIPELINE, STATUS, PLAN, SNAPSHOT, VALIDATE, DONE, BLOCKED]
+transitions:
+  - { trigger: "ZEN NEW", from: IDLE, to: SETUP, command: harness/commands/zen-new.yaml }
+  - { trigger: "ZEN MEMORY INIT", from: IDLE, to: MEMORY_INIT, command: harness/commands/zen-memory-init.yaml }
+  - { trigger: "ZEN NEW BUILD", from: [IDLE, SETUP], to: BUILD, command: harness/commands/zen-build-agent.yaml }
+  - { trigger: "ZEN STATUS", from: IDLE, to: STATUS, command: harness/commands/zen-status.yaml }
+  - { trigger: "ZEN PLAN", from: IDLE, to: PLAN, command: harness/commands/zen-plan.yaml }
+  - { trigger: "ZEN SNAPSHOT", from: IDLE, to: SNAPSHOT, command: harness/commands/zen-snapshot.yaml }
+  - { trigger: "ZEN P1", from: IDLE, to: PIPELINE, pipeline: harness/pipelines/p1.yaml }
+  - { trigger: "ZEN P2", from: IDLE, to: PIPELINE, pipeline: harness/pipelines/p2.yaml }
+  - { trigger: "ZEN P3", from: IDLE, to: P3_PIPELINE, pipeline: harness/pipelines/p3.yaml }
+  - { trigger: "ZEN RESET", from: "*", to: IDLE, command: harness/commands/zen-reset.yaml }
+  - { trigger: "ZEN VALIDATE", from: "*", to: VALIDATE, command: harness/commands/zen-validate.yaml }

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/atomic-audit-append.schema.json",
+  "title": "00Z atomic audit append design schema",
+  "description": "Design-only schema for future productive append-only AUDIT.jsonl writes; not active.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["enabled", "disabled_by_default", "append_only", "target_path", "event_schema", "requires", "redacted"],
+  "properties": {
+    "enabled": {"type": "boolean", "const": false},
+    "disabled_by_default": {"type": "boolean", "const": true},
+    "append_only": {"type": "boolean", "const": true},
+    "target_path": {"type": "string", "pattern": "^projects/\\{project\\}/p3/\\{run\\}/reports/AUDIT\\.jsonl$"},
+    "event_schema": {"type": "string", "const": "harness/schemas/audit.schema.json"},
+    "requires": {"type": "array", "items": {"type": "string"}},
+    "redacted": {"type": "boolean", "const": true}
+  }
+}

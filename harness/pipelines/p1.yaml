@@ -1,0 +1,70 @@
+id: p1
+name: P1 Ask
+version: 0.2.0
+status: active
+trigger: ZEN P1
+routing_state_transition: IDLE -> PIPELINE -> DONE -> IDLE
+run_state_transition:
+  start_from: [READY_READONLY, READY_MUTATING]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+run_state_semantics:
+  default_mode: read_only
+  mutation_allowed: explicit_confirmation_only
+  mutation_requires_state: READY_MUTATING
+purpose: Direkter, sicherer Expertendialog ohne Sub-Agenten-Overhead.
+
+constraints:
+  max_agents: 1
+  max_rework_cycles: 0
+  force_gate: false
+  write_mode: explicit_confirmation_only
+  security_gates: [policy_gate, secret_gate, filesystem_gate]
+
+routing:
+  use_when:
+    - kurze Frage oder Entscheidung
+    - Plan verfeinern
+    - read-only Analyse ohne Artefaktpflicht
+  escalate_to_p2_when:
+    - ein klarer Task an einen spezialisierten Agenten nötig ist
+  escalate_to_p3_when:
+    - mehrere unabhängige Tasks oder ein Validierungs-Gate nötig sind
+
+inputs:
+  required:
+    - user_request
+  optional:
+    - active_project
+    - relevant_files
+
+steps:
+  - id: intake
+    actor: orchestrator
+    action: Ziel, Scope, Risiko und benötigten Kontext klären.
+    output: normalized_request
+  - id: context_check
+    actor: orchestrator
+    action: Nur erforderliche Hot-Memory- und Projektreferenzen laden.
+    output: context_brief
+  - id: answer
+    actor: orchestrator
+    action: Direkt antworten oder maximal eine Rückfrage stellen.
+    output: concise_guidance
+  - id: next_step
+    actor: orchestrator
+    action: Konkreten nächsten Schritt oder Eskalation zu P2/P3 vorschlagen.
+    output: next_action
+
+output_contract:
+  format: markdown
+  sections: [Antwort, Evidenz, Risiken, Nächster Schritt]
+  max_tokens: 4000
+
+artifact_policy:
+  default: no_file_write
+  allowed_after_confirmation:
+    - projects/*/plan.md
+    - projects/*/state.md

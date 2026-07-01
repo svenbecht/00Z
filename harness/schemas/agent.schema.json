@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/agent.schema.json",
+  "title": "00Z agent frontmatter schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["agent_name", "status", "skill_type"],
+  "properties": {
+    "agent_name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string" },
+    "status": { "type": "string", "enum": ["template", "scaffold", "draft", "active", "stable", "deprecated"] },
+    "skill_type": {
+      "type": "string",
+      "anyOf": [
+        { "enum": ["reactive", "proactive", "orchestrator", "hybrid", "validator"] },
+        { "pattern": "^\\{\\{.*\\}\\}$" }
+      ]
+    },
+    "language": { "type": "string", "enum": ["de", "en", "de+en"] },
+    "chain_of_evidence": { "type": "boolean" },
+    "react_mode": { "type": ["string", "boolean"], "enum": ["enabled", "disabled", true, false] },
+    "allowed_tools": { "type": "array", "items": { "type": "string" } },
+    "gated_tools": { "type": "array", "items": { "type": "string" } },
+    "agent_privileges": { "type": "array", "items": { "type": "string" } },
+    "write_access": { "type": "boolean" },
+    "used_in": { "type": "array", "items": { "type": "string" } },
+    "reasoning_profile": { "type": "string" },
+    "protected_by": { "type": "array", "items": { "type": "string" } },
+    "triggered_by": { "type": "array", "items": { "type": "string" } },
+    "handoff_to": { "type": "array" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "write_access": { "const": false } } },
+      "then": {
+        "not": {
+          "properties": {
+            "allowed_tools": { "contains": { "enum": ["write", "edit"] } }
+          },
+          "required": ["allowed_tools"]
+        }
+      }
+    }
+  ]
+}

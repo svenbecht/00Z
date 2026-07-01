@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/manifest.schema.json",
+  "title": "00Z manifest schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "version", "status", "language", "core", "adapters", "pipelines", "security", "memory"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+" },
+    "status": { "type": "string", "enum": ["scaffold", "draft", "active", "stable", "deprecated"] },
+    "language": { "type": "string", "enum": ["de", "en", "de+en"] },
+    "profile": { "type": "string" },
+    "core": {
+      "type": "object",
+      "required": ["soul", "orchestrator", "boot_protocol"],
+      "additionalProperties": false,
+      "properties": {
+        "soul": { "$ref": "#/$defs/path" },
+        "orchestrator": { "$ref": "#/$defs/path" },
+        "boot_protocol": { "$ref": "#/$defs/path" }
+      }
+    },
+    "adapters": {
+      "type": "object",
+      "required": ["default", "supported"],
+      "properties": {
+        "default": { "type": "string" },
+        "supported": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    },
+    "pipelines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "path"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^p[0-9]+$" },
+          "path": { "$ref": "#/$defs/path" }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": ["policy_root", "require_policy_gate", "require_schema_gate"],
+      "properties": {
+        "policy_root": { "$ref": "#/$defs/path" },
+        "read_only_until_gates_pass": { "type": "boolean" }
+      },
+      "patternProperties": {
+        "^require_[a-z_]+_gate$": { "type": "boolean" }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "required": ["type", "root", "load_order"],
+      "properties": {
+        "type": { "type": "string" },
+        "root": { "$ref": "#/$defs/path" },
+        "hot_root": { "$ref": "#/$defs/path" },
+        "cold_root": { "$ref": "#/$defs/path" },
+        "load_order": { "type": "array", "items": { "type": "string" } },
+        "legacy_flat_files": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "context_management": { "type": "object" },
+    "reasoning": { "type": "object" }
+  },
+  "$defs": {
+    "path": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|\\.\\.)" } }
+  }
+}

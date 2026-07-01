@@ -1,0 +1,55 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Local agent/runtime state
+.pi/
+.claude/
+harness/.cache/*
+!harness/.cache/.gitkeep
+validation/reports/*.report.md
+validation/reports/*.report.json
+validation/reports/*.snapshot.md
+validation/reports/*.snapshot.json
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Runtime / temp
+*.log
+*.tmp
+*.bak
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+runs/
+sessions/
+agent-sessions/
+outputs/
+
+# Snapshots generated at runtime
+prompts/snapshot/snapshot.md
+
+# Keep tracked safe files
+!.env.example
+!validation/reports/README.md
+!validation/reports/release-status.snapshot.md
+!validation/reports/release-status.snapshot.json

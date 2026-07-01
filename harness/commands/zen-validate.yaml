@@ -1,0 +1,70 @@
+id: zen-validate
+version: 0.1.0
+status: implemented
+mode: source-read-only
+purpose: "Harness source-read-only validieren und optional redigierte Reports schreiben."
+run_state_transition:
+  start_from: [INIT_REQUIRED, CONFIG_INCOMPLETE, READY_READONLY, READY_MUTATING, BLOCKED, DONE, FAILED]
+  on_start: VALIDATING
+  on_success: READY_READONLY
+  on_warn: READY_READONLY
+  on_blocked: BLOCKED
+  on_failure: FAILED
+mutation:
+  required_state: null
+  allowed: false
+  report_write_exception: validation/reports/**
+runtime_boundary:
+  source_read_only: "Harness-Quellen werden gelesen, aber nicht verändert."
+  non_destructive: "Keine Deletes, keine Rechteänderungen, kein Git/CI/Deployment, keine Dependency- oder Lockfile-Aktionen."
+  report_writing_allowed: "Normalmodus darf ausschließlich redigierte Reports unter validation/reports/ schreiben."
+  check_only_no_write: "--check-only garantiert keine Report-Schreibausgaben und gibt Status/Summary nur auf stdout aus; PASS-Anzahl kann wegen entfallender Report-Metriken vom Normalmodus abweichen."
+preconditions:
+  - read_before_write
+  - no_secret_file_reads
+  - validator_policy_boundary
+inputs:
+  - harness/runtime.yaml
+  - validation/*.yaml
+runtime:
+  script: tools/zen_validate.py
+  invocation: python3 tools/zen_validate.py --root .
+  check_only_invocation: python3 tools/zen_validate.py --root . --check-only
+  mode: source-read-only
+  options:
+    - --root
+    - --report-md
+    - --report-json
+    - --no-json
+    - --check-only
+outputs:
+  - validation/reports/zen-validate.report.md
+  - validation/reports/zen-validate.report.json
+check_only_outputs: []
+reads:
+  - harness/**/*.yaml
+  - harness/**/*.json
+  - validation/*.yaml
+  - adapters/**/*.yaml
+  - agents/agent_registry.yaml
+  - tools/zen_validate.py
+writes:
+  - validation/reports/zen-validate.report.md
+  - validation/reports/zen-validate.report.json
+gates:
+  before_start: [filesystem_gate, secret_gate]
+  before_write: [validator_policy_boundary, secret_gate]
+  check_only: [no_report_writes]
+failure_modes:
+  - schema_or_yaml_error: BLOCKED
+  - secret_detected: BLOCKED
+  - policy_boundary_invalid: BLOCKED
+  - runtime_exception: FAILED
+allowed_report_writes:
+  - validation/reports/zen-validate.report.md
+  - validation/reports/zen-validate.report.json
+performance_report_policy:
+  current: integrated_into_zen_validate_report
+  standalone_path_reserved: validation/reports/performance-gate.report.md
+  note: "Der aktuelle Validator schreibt Performance-Ergebnisse als Check performance_budget in den ZEN VALIDATE Report. Ein separater Performance-Gate-Reportpfad ist für spätere dedizierte Gate-Reports reserviert."
+notes: "ZEN VALIDATE: Lokale Validator Runtime. Normalmodus ist source-read-only/non-destructive mit ausschließlich erlaubten redigierten Report-Schreibausgaben unter validation/reports/. --check-only ist no-write. Keine echten .env-Dateien lesen."

@@ -1,0 +1,154 @@
+id: p3
+name: P3 Mid Pipeline
+version: 0.2.0
+status: active
+trigger: ZEN P3
+routing_state_transition: IDLE -> P3_PIPELINE -> DONE -> IDLE
+run_state_transition:
+  start_from: [READY_MUTATING]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+run_state_semantics:
+  default_mode: gated_multi_agent
+  mutation_allowed: after_force_gate_approved_only
+  mutation_requires_state: READY_MUTATING
+  persist_requires: [force_gate, secret_gate, filesystem_gate, prompt_injection_gate]
+purpose: Fokussierte Multi-Agent-Pipeline für bis zu drei Tasks mit finalem Force Gate.
+
+constraints:
+  max_agents: 3
+  max_rework_cycles: 2
+  force_gate: true
+  optional_gate_after_tasklist: true
+  write_mode: persist_only_after_force_gate_approved
+  security_gates: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+  naming_policy: P3_ONLY_NO_LEGACY_ALIASES
+
+routing:
+  use_when:
+    - Aufgabe in maximal drei Tasks zerlegbar ist
+    - mehrere Agenten oder explizite Validierung nötig sind
+    - Ergebnis in einer Sitzung lieferbar ist
+  block_when:
+    - mehr als drei Agenten nötig sind
+    - destructive actions ohne explizite Freigabe nötig wären
+    - Secrets oder geschützte Pfade betroffen sind
+
+inputs:
+  required:
+    - user_request
+    - active_project_or_scope
+  optional:
+    - gate_after_tasklist
+    - agent_pool_hint
+
+artifacts:
+  run_dir: projects/{project}/p3/{date}_{sequence}/
+  lifecycle: [transient, draft, approved, persisted, archived, rejected]
+  zones:
+    transient: memory_only_no_file_write
+    draft: projects/{project}/p3/{date}_{sequence}/draft/
+    approved: projects/{project}/p3/{date}_{sequence}/approved/
+    report: projects/{project}/p3/{date}_{sequence}/reports/
+    snapshot: prompts/snapshot/
+    archived: projects/{project}/p3/{date}_{sequence}/archive/
+    rejected: projects/{project}/p3/{date}_{sequence}/rejected/
+  brief: draft/BRIEF.md
+  tasklist: draft/TASKLIST.md
+  results_dir: draft/results/
+  gates_dir: reports/gates/
+  final: approved/FINAL.md
+  audit_log: reports/AUDIT.jsonl
+  lifecycle_rules:
+    transient_to_draft: READY_MUTATING plus filesystem_gate plus secret_gate plus prompt_injection_gate plus confirmation
+    draft_to_approved: force_gate APPROVED
+    approved_to_persisted: approved plus secret_gate plus filesystem_gate plus prompt_injection_gate
+    draft_to_rejected: force_gate REJECTED_OR_BLOCKED
+    persisted_to_archived: explicit_user_confirmation
+    rejected_to_archived: explicit_user_confirmation
+  trust:
+    transient: untrusted_context
+    draft: untrusted_generated_artifact
+    approved: reviewed_artifact
+    persisted: trusted_project_artifact
+    archived: retained_audit_artifact
+    rejected: retained_rejected_artifact
+
+run_manifest:
+  schema: harness/schemas/run-manifest.schema.json
+  path: projects/{project}/p3/{date}_{sequence}/reports/RUN_MANIFEST.json
+  dry_run_preview: stdout_only_no_file_until_READY_MUTATING
+  required_fields: [run_id, project, pipeline, run_state, artifact_lifecycle, artifact_zones, audit_log, dry_run, redacted]
+
+audit:
+  log: projects/{project}/p3/{date}_{sequence}/reports/AUDIT.jsonl
+  schema: harness/schemas/audit.schema.json
+  mode: dry_run_preview_until_executor_write_boundary
+  required_events: [pipeline_run, tool_call, gate_decision, hitl_confirmation, policy_block]
+  required_fields: [timestamp, run_id, actor, event_type, target_paths, risk_level, trust_zone, decision, result, redacted]
+
+hitl_confirmation:
+  schema: harness/schemas/hitl-confirmation.schema.json
+  id_format: hitl_YYYYMMDDTHHMMSSZ_suffix
+  required_for: [draft_persist, approved_persist, archive, high_risk_or_critical]
+  required_fields: [confirmation_id, run_id, actor, scope, risk_level, target_paths, expires_at, decision, redacted]
+
+steps:
+  - id: prepare_run
+    actor: orchestrator
+    action: Projekt auflösen, Security Gates prüfen, P3-Artefaktpfade vorschlagen.
+    output: p3_run_context
+  - id: prompt_brief
+    agent: agents/system/prompt-engineer.agent.md
+    action: User-Anfrage in vollständigen 00Z Brief v2 transformieren; Trusted Constraints und Untrusted Context strikt trennen.
+    output: brief_v2
+  - id: tasklist
+    agent: agents/system/tasklist.agent.md
+    action: Nur einen Brief mit Handoff Status ready in maximal drei Tasks mit Agent-Zuweisung und Abhängigkeiten zerlegen.
+    output: tasklist
+  - id: optional_tasklist_gate
+    agent: agents/system/rubber-duck.agent.md
+    condition: gate_after_tasklist == true
+    pass_status: APPROVED
+    retry_on: REJECTED
+    block_on: BLOCKED
+  - id: execute_tasks
+    actor: assigned_agents
+    mode: parallel_or_sequential
+    max_agents: 3
+    action: Tasks gemäß Tasklist ausführen; jedes Ergebnis mit Evidence und Risiken liefern.
+    output: task_results
+  - id: synthesize
+    actor: orchestrator
+    action: Ergebnisse zusammenführen, Konflikte markieren, finalen Draft erstellen.
+    output: final_draft
+  - id: force_gate
+    agent: agents/system/rubber-duck.agent.md
+    required: true
+    pass_status: APPROVED
+    retry_on: REJECTED
+    block_on: BLOCKED
+  - id: persist_or_report
+    actor: orchestrator
+    action: Nur bei APPROVED speichern; sonst BLOCKED-Bericht und sichere nächste Option liefern.
+    output: final_status
+
+gate_semantics:
+  APPROVED: Weiter oder speichern.
+  REJECTED: Aktuellen Schritt überarbeiten, maximal zwei Rework-Zyklen.
+  BLOCKED: Pipeline stoppen und User-Entscheidung anfordern.
+
+artifact_policy:
+  default: no_persist_until_force_gate
+  allowed_after_approved:
+    - projects/*/p3/*/approved/**
+    - projects/*/p3/*/reports/**
+    - projects/*/p3/*/archive/**
+  allowed_state_update_after_approved:
+    - projects/*/state.md
+  forbidden_after_approved:
+    - projects/*/p3/*/draft/**
+    - projects/*/p3/*/rejected/**
+  persist_requires: [READY_MUTATING, force_gate_APPROVED, filesystem_gate, secret_gate, prompt_injection_gate, confirmation]

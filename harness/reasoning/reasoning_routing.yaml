@@ -1,0 +1,135 @@
+version: "1.1"
+updated: "2026-05-21"
+purpose: "Dynamisches Reasoning-Routing nach Task-Typ, Risiko, Pipeline und Tokenbudget"
+
+required: [chain_of_evidence, react_mode]
+
+safety:
+  reveal_chain_of_thought: false
+  output_mode: concise_rationale_only
+  persist_private_scratchpad: false
+  expose_internal_steps: false
+
+complexity_levels:
+  simple:
+    max_optional_methods: 0
+    persist_reasoning_output: false
+    max_reasoning_tokens: 150
+    use_when: "Kurze Antwort, geringe Risiken, kein Handoff."
+  standard:
+    max_optional_methods: 1
+    persist_reasoning_output: true
+    max_reasoning_tokens: 300
+    use_when: "Ein klarer Task, begrenzte Kontextnachladung."
+  complex:
+    max_optional_methods: 2
+    persist_reasoning_output: true
+    max_reasoning_tokens: 500
+    use_when: "Mehrere Artefakte, Agent-Handoff, Architektur- oder Validierungsbedarf."
+  critical:
+    max_optional_methods: 3
+    persist_reasoning_output: true
+    max_reasoning_tokens: 700
+    force_gate: true
+    use_when: "Security, geschützte Pfade, P3 Force Gate, destruktives Risiko oder hohe Unsicherheit."
+
+pipeline_defaults:
+  p1:
+    complexity: simple
+    methods: []
+  p2:
+    complexity: standard
+    methods: [decomposition]
+  p3:
+    complexity: complex
+    methods: [decomposition, mid_trajectory_validation]
+  force_gate:
+    complexity: critical
+    methods: [verification, risk_gate, meta_cognitive_summary]
+
+routing:
+  implementation:
+    keywords: [implementiere, baue, scaffold, erstelle, refactor, ändere]
+    default_complexity: standard
+    methods:
+      standard: [decomposition]
+      complex: [decomposition, plan_and_solve]
+      critical: [decomposition, plan_and_solve, self_critique]
+
+  architecture:
+    keywords: [architektur, design, harness, blueprint, system]
+    default_complexity: complex
+    methods:
+      standard: [step_back]
+      complex: [step_back, tree_of_options]
+      critical: [step_back, tree_of_options, meta_cognitive_summary]
+
+  analysis:
+    keywords: [analysiere, prüfe, audit, bewerte]
+    default_complexity: standard
+    methods:
+      standard: [step_back]
+      complex: [step_back, verification]
+      critical: [step_back, verification, meta_cognitive_summary]
+
+  debugging:
+    keywords: [bug, fehler, crash, debug, fail]
+    default_complexity: complex
+    methods:
+      standard: [verification]
+      complex: [verification, self_critique]
+      critical: [verification, self_critique, mid_trajectory_validation]
+
+  agent_workflow:
+    keywords: [agent, skill, pipeline, orchestrator, handoff]
+    default_complexity: complex
+    methods:
+      standard: [decomposition]
+      complex: [decomposition, mid_trajectory_validation]
+      critical: [decomposition, mid_trajectory_validation, milestone_review]
+
+  context_memory:
+    keywords: [kontext, context, memory, cache, budget, token, manifest]
+    default_complexity: complex
+    methods:
+      standard: [context_budget_check]
+      complex: [context_budget_check, verification]
+      critical: [context_budget_check, verification, risk_gate]
+
+  security_policy:
+    keywords: [security, policy, secret, protected, destructive, bash, network]
+    default_complexity: critical
+    methods:
+      standard: [verification]
+      complex: [verification, risk_gate]
+      critical: [verification, risk_gate, meta_cognitive_summary]
+
+risk_escalation:
+  to_critical_if:
+    - touches_security_policy
+    - touches_adapter_boot_rules
+    - writes_to_projects_state
+    - p3_force_gate
+    - protected_path_mentioned
+    - context_budget_hard_limit_near
+  to_complex_if:
+    - more_than_three_files_changed
+    - agent_handoff_required
+    - schema_or_validation_changed
+
+fallback:
+  complexity: standard
+  methods: [decomposition]
+
+budget_override:
+  if_remaining_context_below_percent: 25
+  reduce_complexity_by: 1
+  preserve_validation: true
+  never_drop: [chain_of_evidence]
+  if_budget_hard_limit_reached: "stop_and_ask_user"
+
+output_contract:
+  schema: harness/reasoning/reasoning_output.schema.json
+  max_evidence_items: 5
+  max_optional_methods: 3
+  require_no_chain_of_thought_disclosure: true

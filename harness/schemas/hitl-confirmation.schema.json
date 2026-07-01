@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/hitl-confirmation.schema.json",
+  "title": "00Z HITL confirmation schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["confirmation_id", "run_id", "actor", "scope", "risk_level", "target_paths", "expires_at", "decision", "redacted"],
+  "properties": {
+    "confirmation_id": {"type": "string", "pattern": "^hitl_[0-9]{8}T[0-9]{6}Z_[A-Za-z0-9_-]{6,}$"},
+    "run_id": {"type": "string", "minLength": 1},
+    "actor": {"type": "string", "minLength": 1},
+    "scope": {"type": "string", "minLength": 1},
+    "risk_level": {"type": "string", "enum": ["medium", "high", "critical"]},
+    "target_paths": {"type": "array", "items": {"type": "string"}},
+    "expires_at": {"type": "string", "minLength": 1},
+    "decision": {"type": "string", "enum": ["approved", "rejected"]},
+    "redacted": {"type": "boolean", "const": true}
+  }
+}

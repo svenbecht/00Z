@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "security",
+  "verdict": "critical",
+  "findings": [
+    {
+      "severity": "critical",
+      "category": "security",
+      "title": "Critical finding without blocking reason must fail",
+      "file": "SECURITY.md",
+      "line": 1,
+      "evidence": "Critical findings require explicit blocking evidence.",
+      "recommendation": "Add blockingReason and non-low confidence.",
+      "confidence": "high",
+      "source": "file",
+      "domain": "security",
+      "fingerprint": "f88a1a1805891ff7"
+    }
+  ]
+}

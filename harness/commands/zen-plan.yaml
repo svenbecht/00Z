@@ -1,0 +1,42 @@
+id: zen-plan
+version: 0.2.0
+status: ready
+mode: guarded
+purpose: "Plan read-only entwerfen; Persistenz eines Plans nur nach Mutationsfreigabe."
+run_state_transition:
+  start_from: [READY_READONLY, READY_MUTATING]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+mutation:
+  readonly_intake_allowed_from: READY_READONLY
+  readonly_intake_outputs: [plan_summary, dry_run_plan]
+  persist_requires_state: READY_MUTATING
+  required_state: READY_MUTATING
+  requires_confirmation: true
+  allowed_after_gates: [policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+preconditions:
+  - read_before_write
+  - policy_gate
+  - secret_gate
+inputs:
+  - user_request
+  - active_project_or_scope
+outputs:
+  - plan_summary
+  - projects/{project}/plan.md
+reads:
+  - projects/{project}/state.md
+  - projects/templates/plan.md
+  - docs/architecture.md
+writes:
+  - projects/{project}/plan.md
+gates:
+  before_start: [policy_gate, filesystem_gate, secret_gate]
+  before_write: [filesystem_gate, secret_gate, prompt_injection_gate]
+failure_modes:
+  - scope_missing: BLOCKED
+  - user_confirmation_missing_for_persist: DONE
+  - secret_detected: BLOCKED
+notes: "Ohne READY_MUTATING liefert ZEN PLAN nur einen nicht persistierten Plan im Antwortkontext."

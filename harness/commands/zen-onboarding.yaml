@@ -1,0 +1,58 @@
+id: zen-onboarding
+version: 0.1.0
+status: implemented
+mode: read-only
+purpose: "Lokale dependency-freie Onboarding-Oberfläche für Start/Setup des ersten Agenten bereitstellen."
+run_state_transition:
+  start_from: [INIT_REQUIRED, CONFIG_INCOMPLETE, READY_READONLY, READY_MUTATING, BLOCKED, DONE, FAILED]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+mutation:
+  required_state: null
+  allowed: false
+runtime_boundary:
+  stdlib_only: true
+  no_write_default: true
+  no_external_actions: true
+  no_secret_file_reads: true
+  no_command_invention: "Zeigt nur Trigger, Befehle und lokale Aufrufe aus vorhandenen Artefakten."
+preconditions:
+  - read_before_write
+  - no_secret_file_reads
+  - no_external_actions
+inputs:
+  - optional_adapter: [auto, pi, claude, local]
+  - optional_linear_output
+outputs:
+  - onboarding_status_summary_stdout
+  - readiness_tools_summary_stdout
+  - adapter_trigger_summary_stdout
+runtime:
+  script: tools/zen_onboarding.py
+  invocation: python3 tools/zen_onboarding.py --root .
+  check_only_invocation: python3 tools/zen_onboarding.py --root . --linear --no-color
+  mode: read-only
+  options:
+    - --root
+    - --adapter
+    - --linear
+    - --no-color
+reads:
+  - harness/manifest.yaml
+  - harness/commands/*.yaml
+  - adapters/pi/adapter.yaml
+  - adapters/claude/adapter.yaml
+  - docs/onboarding.md
+  - tools/*.py
+writes: []
+gates:
+  before_start: [filesystem_gate, secret_gate]
+  before_write: []
+failure_modes:
+  - missing_manifest: BLOCKED
+  - env_file_present: BLOCKED
+  - missing_artifact: UNKNOWN
+  - unsafe_read_attempt: BLOCKED
+notes: "ZEN ONBOARDING ist kein nativer Adapter-Trigger. Die lokale Oberfläche wird direkt per python3 tools/zen_onboarding.py gestartet und führt keine externen Aktionen aus."

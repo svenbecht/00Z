@@ -1,0 +1,47 @@
+id: 00z
+version: 0.1.0
+status: scaffold
+language: de
+profile: professional-agent-harness
+core:
+  soul: core/SOUL.md
+  orchestrator: core/ORCHESTRATOR.md
+  boot_protocol: core/BOOT_PROTOCOL.md
+adapters:
+  default: pi
+  supported: [pi, claude]
+pipelines:
+  - { id: p1, path: harness/pipelines/p1.yaml }
+  - { id: p2, path: harness/pipelines/p2.yaml }
+  - { id: p3, path: harness/pipelines/p3.yaml }
+security:
+  policy_root: harness/policies
+  onboarding_guide: docs/onboarding.md
+  require_policy_gate: true
+  require_placeholder_gate: true
+  require_onboarding_gate: true
+  require_secret_gate: true
+  require_filesystem_gate: true
+  require_prompt_injection_gate: true
+  require_adapter_gate: true
+  require_schema_gate: true
+  read_only_until_gates_pass: true
+memory:
+  type: markdown
+  root: kontext/memory
+  hot_root: kontext/memory/hot
+  cold_root: kontext/memory/cold
+  load_order: [reflection_hot, todos_hot, semantic_profile]
+  legacy_flat_files: [REFLECTION, GLOBAL_TODOS, SEMANTIC, PROCEDURAL, EPISODIC]
+  legacy_policy: on_demand_do_not_delete
+context_management:
+  manifest: harness/context_manifest.yaml
+  cache_policy: harness/cache_policy.yaml
+  budget_policy: harness/budget_policy.yaml
+  runtime: harness/runtime.yaml
+  agent_registry: agents/agent_registry.yaml
+reasoning:
+  catalog: harness/reasoning/reasoning_catalog.yaml
+  routing: harness/reasoning/reasoning_routing.yaml
+  output_schema: harness/reasoning/reasoning_output.schema.json
+  reveal_chain_of_thought: false

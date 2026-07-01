@@ -1,0 +1,89 @@
+adapter: pi
+entrypoint: adapters/pi/AGENTS.md
+supports_slash_commands: true
+supports_extensions: true
+language: de
+boot:
+  source: core/BOOT_PROTOCOL.md
+  security_sources:
+    - SECURITY.md
+    - harness/policies/tools.yaml
+    - harness/policies/filesystem.yaml
+    - harness/policies/protected_paths.yaml
+    - harness/policies/secrets.yaml
+    - harness/policies/network.yaml
+    - harness/policies/prompt-injection.yaml
+    - harness/policies/onboarding.yaml
+    - validation/policy-gate.yaml
+    - validation/placeholder-gate.yaml
+    - validation/onboarding-gates.yaml
+    - validation/secret-gates.yaml
+    - validation/filesystem-gates.yaml
+    - validation/prompt-injection-gates.yaml
+    - validation/adapter-gate.yaml
+    - validation/pipeline-gate.yaml
+context_management:
+  runtime: harness/runtime.yaml
+  manifest: harness/context_manifest.yaml
+  cache_policy: harness/cache_policy.yaml
+  budget_policy: harness/budget_policy.yaml
+  boot_profile: boot
+  cache_root: .pi/cache
+  use_summaries_first: true
+  cold_memory_auto_load: false
+reasoning:
+  catalog: harness/reasoning/reasoning_catalog.yaml
+  routing: harness/reasoning/reasoning_routing.yaml
+  output_schema: harness/reasoning/reasoning_output.schema.json
+  reveal_chain_of_thought: false
+  max_optional_methods: 3
+  target_output_tokens: 500
+  hard_output_tokens: 700
+tools:
+  prefer: [read, grep, find]
+  gated: [write, edit]
+  restrict: [bash, network]
+  default_decision: deny_mutating
+security:
+  untrusted_content_default: true
+  env_files_blocked: true
+  require_tool_call_contract: true
+  require_onboarding_guide: docs/onboarding.md
+  require_gates_before_mutation: [onboarding_gate, placeholder_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate, adapter_gate]
+  no_chain_of_thought_disclosure: true
+  no_project_write_until_ready_mutating: true
+  blocked_response_prefix: "BLOCKED:"
+  warn_response_prefix: "WARN:"
+  pass_response_prefix: "PASS:"
+runtime_contract:
+  local_runtime_tools: [tools/zen_validate.py, tools/zen_test_negative.py, tools/zen_test_all.py, tools/zen_adapter_smoke.py]
+  native_runtime_implemented: false
+  productive_project_writes_enabled: false
+  check_only_no_report: true
+  report_root: validation/reports
+readiness:
+  checklist: docs/readiness.md
+  required_local_checks: [zen_validate_check_only, zen_test_negative_check_only, zen_test_all_check_only, zen_adapter_smoke_check_only]
+validation_flow:
+  trigger: ZEN VALIDATE
+  runtime_implemented: true
+  native_runtime_implemented: false
+  roadmap_note: "Native Pi extension/slash-command runtime is not bundled yet; local validator tools/zen_validate.py is implemented."
+  gates:
+    - validation/schema-gate.yaml
+    - validation/placeholder-gate.yaml
+    - validation/policy-gate.yaml
+    - validation/onboarding-gates.yaml
+    - validation/secret-gates.yaml
+    - validation/filesystem-gates.yaml
+    - validation/prompt-injection-gates.yaml
+    - validation/adapter-gate.yaml
+    - validation/pipeline-gate.yaml
+    - validation/performance-gate.yaml
+commands:
+  native_triggers: [ZEN NEW, ZEN MEMORY INIT, ZEN NEW BUILD, ZEN STATUS, ZEN PLAN, ZEN SNAPSHOT, ZEN P1, ZEN P2, ZEN P3, ZEN RESET, ZEN VALIDATE]
+  validation_trigger: ZEN VALIDATE
+  pipeline_routes:
+    ZEN P1: harness/pipelines/p1.yaml
+    ZEN P2: harness/pipelines/p2.yaml
+    ZEN P3: harness/pipelines/p3.yaml

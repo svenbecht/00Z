@@ -1,0 +1,90 @@
+gate: onboarding
+version: "1.1"
+status: active
+purpose: "Erzwingt Guide-/Gate-Durchlauf vor produktiver Harness-Nutzung."
+on_fail: BLOCKED
+
+inputs:
+  guide: docs/onboarding.md
+  boot: core/BOOT_PROTOCOL.md
+  manifest: harness/manifest.yaml
+  state_machine: harness/state_machine.yaml
+  adapters: [adapters/pi/adapter.yaml, adapters/claude/adapter.yaml]
+  required_files:
+    - SECURITY.md
+    - docs/onboarding.md
+    - core/BOOT_PROTOCOL.md
+    - harness/policies/filesystem.yaml
+    - harness/policies/protected_paths.yaml
+    - harness/policies/secrets.yaml
+    - harness/policies/network.yaml
+    - harness/policies/shell.yaml
+    - harness/policies/tools.yaml
+    - harness/policies/prompt-injection.yaml
+    - harness/policies/onboarding.yaml
+    - validation/schema-gate.yaml
+    - validation/placeholder-gate.yaml
+    - validation/policy-gate.yaml
+    - validation/secret-gates.yaml
+    - validation/filesystem-gates.yaml
+    - validation/prompt-injection-gates.yaml
+    - validation/adapter-gate.yaml
+    - validation/pipeline-gate.yaml
+    - harness/pipelines/p1.yaml
+    - harness/pipelines/p2.yaml
+    - harness/pipelines/p3.yaml
+    - harness/reasoning/reasoning_catalog.yaml
+    - harness/reasoning/reasoning_routing.yaml
+    - harness/reasoning/reasoning_output.schema.json
+
+severity: critical
+
+checks:
+  required_files_exist:
+    severity: critical
+    fail_if: [missing_required_file]
+  onboarding_guide_required_before_use:
+    severity: critical
+    required_before: [ZEN_NEW_BUILD, ZEN_P1, ZEN_P2, ZEN_P3, persist_artifact]
+    minimum_state: READY_READONLY
+    fail_if: [guide_missing, productive_use_before_gate]
+  no_critical_placeholders:
+    severity: critical
+    pattern: "\\{\\{[^}]+\\}\\}"
+    paths: [SECURITY.md, core/**, harness/**, validation/**, adapters/**]
+    allow_paths: [prompts/**/template/**, docs/examples/**]
+    fail_if: [placeholder_in_active_file]
+  mutating_tools_require_ready_state:
+    severity: critical
+    allowed_states: [READY_MUTATING]
+    tools: [write, edit, bash]
+    fail_if: [mutation_before_ready]
+  reasoning_must_not_request_chain_of_thought:
+    severity: critical
+    require: {reveal_chain_of_thought: false, persist_private_scratchpad: false}
+    forbidden_terms: [hidden_chain_of_thought, exhaustive_internal_reasoning, private_scratchpad_output]
+    fail_if: [cot_disclosure_required]
+
+cross_file_checks:
+  boot_loads_security_before_core:
+    source: core/BOOT_PROTOCOL.md
+    require_before: {SECURITY.md: core/SOUL.md, harness/policies/tools.yaml: core/SOUL.md}
+    fail_if: [security_loaded_after_core]
+  manifest_requires_all_gates:
+    source: harness/manifest.yaml
+    required_flags: [require_policy_gate, require_placeholder_gate, require_onboarding_gate, require_secret_gate, require_filesystem_gate, require_prompt_injection_gate, require_adapter_gate]
+    fail_if: [manifest_missing_gate_requirement]
+
+fail_conditions:
+  - missing_required_file
+  - productive_use_before_gate
+  - placeholder_in_active_file
+  - mutation_before_ready
+  - cot_disclosure_required
+  - security_loaded_after_core
+  - manifest_missing_gate_requirement
+
+output_report:
+  path: validation/reports/onboarding-gate.report.md
+  required_fields: [gate, status, readiness_state, checked_files, failures, warnings, evidence, next_action]
+  status_values: [PASS, WARN, FAIL]

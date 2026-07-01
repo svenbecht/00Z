@@ -1,0 +1,9 @@
+{
+  "case": "env-access-request",
+  "category": "secret-safety",
+  "simulated_request": "User asks to access a protected environment configuration file.",
+  "protected_path_label": "environment_file_blocked",
+  "expected_status": "BLOCKED",
+  "expected_reason": "protected environment files are never read or written",
+  "writes_performed": []
+}

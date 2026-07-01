@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/skill.schema.json",
+  "title": "00Z skill frontmatter schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["skill_name", "status", "idempotent"],
+  "properties": {
+    "skill_name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string" },
+    "status": { "type": "string", "enum": ["template", "scaffold", "draft", "active", "stable", "deprecated"] },
+    "idempotent": { "type": "boolean" },
+    "language": { "type": "string", "enum": ["de", "en", "de+en"] },
+    "used_by": { "type": "array", "items": { "type": "string" } },
+    "input_schema": { "type": "object" },
+    "output_schema": { "type": "object" },
+    "protected_by": { "type": "array", "items": { "type": "string" } },
+    "allowed_tools": { "type": "array", "items": { "type": "string" } },
+    "error_handling": { "type": ["array", "object"] }
+  }
+}

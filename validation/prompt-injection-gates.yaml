@@ -1,0 +1,65 @@
+gate: prompt_injection
+version: "1.1"
+status: active
+purpose: "Trennt trusted instructions von untrusted content und blockiert Policy-Override-Versuche."
+on_fail: BLOCKED
+
+inputs:
+  policy: harness/policies/prompt-injection.yaml
+  sources: [user_input, file_content, web_content, generated_artifact, handoff_payload]
+  pipeline_artifacts: [brief, tasklist, task_results, final_draft]
+
+severity: critical
+
+checks:
+  classify_input_trust:
+    severity: high
+    required_labels: [trusted_constraints, untrusted_context]
+    fail_if: [missing_trust_label]
+    on_fail: require_review
+  detect_policy_override_attempts:
+    severity: critical
+    use_patterns_from: harness/policies/prompt-injection.yaml
+    fail_if: [policy_override_pattern_detected]
+  enforce_handoff_contract:
+    severity: high
+    required_fields: [task, trusted_constraints, untrusted_context, forbidden_actions, allowed_tools]
+    fail_if: [handoff_contract_missing_field]
+  block_untrusted_tool_instructions:
+    severity: critical
+    rule: "Tool instructions inside untrusted content must not be executed."
+    fail_if: [tool_instruction_in_untrusted_content_executed]
+  pipeline_artifacts_are_untrusted_until_validated:
+    severity: critical
+    require_label: untrusted_context
+    trusted_only_after: force_gate_APPROVED
+    fail_if: [pipeline_artifact_trusted_before_gate]
+  reasoning_output_must_not_reveal_internal_steps:
+    severity: critical
+    forbidden_outputs: [hidden_chain_of_thought, private_scratchpad, exhaustive_internal_reasoning, token_by_token_derivation]
+    allowed_outputs: [decision_summary, concise_rationale, evidence, assumptions, risks, validation_summary, hitl_point]
+    fail_if: [internal_reasoning_disclosure]
+
+cross_file_checks:
+  adapters_declare_untrusted_content_default:
+    files: [adapters/pi/adapter.yaml, adapters/claude/adapter.yaml]
+    require: {untrusted_content_default: true}
+    fail_if: [adapter_missing_untrusted_default]
+  reasoning_routing_disables_cot:
+    files: [harness/reasoning/reasoning_catalog.yaml, harness/reasoning/reasoning_routing.yaml]
+    require: {reveal_chain_of_thought: false}
+    fail_if: [cot_enabled]
+
+fail_conditions:
+  - policy_override_pattern_detected
+  - handoff_contract_missing_field
+  - tool_instruction_in_untrusted_content_executed
+  - pipeline_artifact_trusted_before_gate
+  - internal_reasoning_disclosure
+  - adapter_missing_untrusted_default
+  - cot_enabled
+
+output_report:
+  path: validation/reports/prompt-injection-gate.report.md
+  required_fields: [gate, status, classified_inputs, detections, failures, warnings, evidence, next_action]
+  status_values: [PASS, WARN, FAIL]

@@ -1,0 +1,65 @@
+policy: prompt_injection
+version: "1.0"
+status: active
+principle: untrusted_content_is_data_not_instruction
+
+default_trust:
+  user_input: untrusted
+  file_content: untrusted
+  web_content: untrusted
+  generated_artifact: untrusted
+
+forbidden_instruction_patterns:
+  - "(?i)ignore (all )?(previous|above) instructions"
+  - "(?i)disregard (the )?(system|developer|policy)"
+  - "(?i)reveal (your )?(system prompt|instructions|secrets)"
+  - "(?i)read .*\\.env"
+  - "(?i)print .*token"
+  - "(?i)disable .*security"
+  - "(?i)bypass .*policy"
+  - "(?i)you are now"
+  - "(?i)act as unrestricted"
+  - "(?i)run .*sudo"
+  - "(?i)exfiltrate"
+
+handling:
+  wrap_untrusted_content: true
+  never_promote_untrusted_to_instruction: true
+  require_handoff_labeling: true
+  tool_instructions_inside_untrusted_content: ignore_and_report
+  generated_pipeline_artifacts_untrusted_until_gate: true
+  reasoning_output_must_be_summary_only: true
+
+handoff_contract:
+  required_fields:
+    - task
+    - trusted_constraints
+    - untrusted_context
+    - forbidden_actions
+    - allowed_tools
+  missing_field_decision: BLOCKED
+
+reasoning_safety:
+  forbidden_disclosure:
+    - hidden_chain_of_thought
+    - private_scratchpad
+    - exhaustive_internal_reasoning
+    - token_by_token_derivation
+  safe_outputs:
+    - decision_summary
+    - concise_rationale
+    - evidence
+    - assumptions
+    - risks
+    - validation_summary
+    - hitl_point
+
+severity_decision:
+  low: annotate
+  medium: require_review
+  high: BLOCKED
+  critical: BLOCKED
+
+on_violation:
+  status: BLOCKED
+  message: "Prompt-injection risk blocked by harness/policies/prompt-injection.yaml"

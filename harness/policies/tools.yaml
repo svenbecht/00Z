@@ -1,0 +1,134 @@
+policy: tools
+version: "1.1"
+status: active
+principle: deny_by_default
+
+required_tool_call_contract:
+  fields:
+    - actor
+    - tool
+    - intent
+    - target_paths
+    - risk_level
+    - trust_zone
+    - policy_decision
+  missing_field_decision: BLOCKED
+
+risk_levels: [low, medium, high, critical]
+trust_zones:
+  trusted:
+    - system
+    - harness_policy
+    - adapter_rules
+  untrusted:
+    - user_input
+    - file_content
+    - web_content
+    - generated_artifact
+
+defaults:
+  read: ask_policy
+  write: deny
+  edit: deny
+  bash: deny
+  network: deny
+  delete: deny
+
+tools:
+  read:
+    decision: allow_after_gates
+    gates: [filesystem_gate, secret_gate]
+  grep:
+    decision: allow_after_gates
+    gates: [filesystem_gate, secret_gate]
+  find:
+    decision: allow_after_gates
+    gates: [filesystem_gate]
+  ls:
+    decision: allow_after_gates
+    gates: [filesystem_gate]
+  write:
+    decision: allow_after_confirmation_or_policy
+    gates: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+    requires_read_first: true
+  edit:
+    decision: allow_after_confirmation_or_policy
+    gates: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+    requires_read_first: true
+  bash:
+    decision: deny_by_default
+    exception: only_named_readonly_commands_from_shell_policy
+
+always_block:
+  commands: [rm, sudo, su, dd, chmod, chown, mkfs, curl, wget, nc, netcat, ssh, scp, rsync]
+  command_patterns:
+    - "(^|[;&|`$()])\\s*rm\\b"
+    - "\\bsudo\\b"
+    - "\\bfind\\b.*\\s-delete\\b"
+    - "\\bpython\\s+-c\\b"
+    - "\\bnode\\s+-e\\b"
+    - "\\bperl\\s+-e\\b"
+    - "\\bsh\\s+-c\\b"
+    - "\\bbash\\s+-c\\b"
+  shell_features: [pipes, redirects, command_substitution, subshells, background_execution]
+
+human_confirmation_required:
+  risk_levels: [high, critical]
+  actions: [write, edit, bash, network, install_dependency, move, copy_outside_workspace, policy_change]
+
+productive_write_boundary:
+  enabled: false
+  disabled_by_default: true
+  adr: docs/adr/ADR-productive-write-boundary.md
+  blocked_by_default: true
+  real_confirmation_schema: harness/schemas/real-confirmation.schema.json
+  project_write_allowlist_schema: harness/schemas/project-write-allowlist.schema.json
+  atomic_audit_append_schema: harness/schemas/atomic-audit-append.schema.json
+  activation_requires: [explicit_user_approval, READY_MUTATING, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate, real_hitl_confirmation, atomic_audit_trail, rubber_duck_approval]
+  productive_project_writes: BLOCKED
+
+executor_policy:
+  tool: tools/zen_execute.py
+  default_decision: dry_run_only
+  allowed_without_confirmation: [preview_command, preview_pipeline, audit_preview_stdout, preview_report_write, hitl_preview, hitl_preview_report_write, audit_append_simulation, confirmation_report_boundary_test, audit_preview_append_validation_report, run_manifest_preview_report]
+  preview_schema: harness/schemas/audit-preview.schema.json
+  preview_report_path: validation/reports/zen-execute.preview.json
+  preview_report_glob: validation/reports/*.preview.json
+  hitl_preview_schema: harness/schemas/hitl-preview.schema.json
+  hitl_preview_report_path: validation/reports/zen-execute.hitl-preview.json
+  hitl_preview_report_glob: validation/reports/*.hitl-preview.json
+  hitl_preview_decision: preview_only
+  effective_confirmation: false
+  audit_append_simulation_effective_append: false
+  confirmation_report_schema: harness/schemas/confirmation-report.schema.json
+  confirmation_report_glob: validation/reports/*.confirmation.json
+  confirmation_report_not_project_authorization: true
+  confirmation_report_production_scope: false
+  audit_preview_event_schema: harness/schemas/audit-preview-event.schema.json
+  audit_preview_jsonl_glob: validation/reports/*.audit-preview.jsonl
+  audit_preview_not_project_audit: true
+  run_manifest_preview_schema: harness/schemas/run-manifest-preview.schema.json
+  run_manifest_preview_glob: validation/reports/*.run-manifest.preview.json
+  run_manifest_preview_not_project_manifest: true
+  forbidden_without_confirmation: [write_project_artifact, append_audit_log, delete, git, dependency_install, env_read, p3_run_directory_create]
+  future_mutation_requires: [READY_MUTATING, filesystem_gate, secret_gate, prompt_injection_gate, hitl_confirmation_id]
+
+audit_log_model:
+  applies_to: [tool_call, gate_decision, hitl_confirmation, policy_block, pipeline_run]
+  schema: harness/schemas/audit.schema.json
+  required_fields: [timestamp, run_id, actor, event_type, target_paths, risk_level, trust_zone, decision, result, redacted]
+  redaction_required: true
+  no_secret_values: true
+  append_only: true
+  p3_log_path: projects/{project}/p3/{date}_{sequence}/reports/AUDIT.jsonl
+
+hitl_confirmation_model:
+  schema: harness/schemas/hitl-confirmation.schema.json
+  id_format: hitl_YYYYMMDDTHHMMSSZ_suffix
+  required_fields: [confirmation_id, run_id, actor, scope, risk_level, target_paths, expires_at, decision, redacted]
+  required_for: [high, critical, p3_persist, archive, policy_change]
+  no_secret_values: true
+
+on_violation:
+  status: BLOCKED
+  message: "Tool call blocked by harness/policies/tools.yaml"

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/runtime.schema.json",
+  "title": "00Z runtime schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["runtime", "context", "performance", "tooling", "reasoning", "slo"],
+  "properties": {
+    "runtime": {
+      "type": "object",
+      "required": ["mode", "default_language", "read_before_write", "unknown_tools_policy"],
+      "properties": {
+        "mode": { "type": "string" },
+        "default_language": { "type": "string", "enum": ["de", "en", "de+en"] },
+        "read_before_write": { "type": "boolean" },
+        "dry_run_supported": { "type": "boolean" },
+        "destructive_requires_confirmation": { "type": "boolean" },
+        "unknown_tools_policy": { "type": "string", "enum": ["deny", "ask", "allow"] }
+      }
+    },
+    "context": { "type": "object" },
+    "performance": {
+      "type": "object",
+      "properties": {
+        "lazy_load_docs": { "type": "boolean" },
+        "prefer_native_tools": { "type": "boolean" },
+        "avoid_full_repo_reads": { "type": "boolean" },
+        "max_parallel_agents": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "max_rework_cycles": { "type": "integer", "minimum": 0, "maximum": 2 }
+      }
+    },
+    "pipelines": { "type": "object" },
+    "tooling": { "type": "object" },
+    "reasoning": {
+      "type": "object",
+      "properties": {
+        "reveal_chain_of_thought": { "const": false },
+        "max_optional_methods": { "type": "integer", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "slo": { "type": "object" },
+    "alerts": { "type": "array", "items": { "type": "object", "required": ["id", "condition", "severity"] } }
+  }
+}

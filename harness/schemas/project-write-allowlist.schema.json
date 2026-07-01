@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/project-write-allowlist.schema.json",
+  "title": "00Z project write allowlist design schema",
+  "description": "Design-only exact allowlist for future productive project writes; not active.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["enabled", "disabled_by_default", "mode", "requires", "allowed_paths"],
+  "properties": {
+    "enabled": {"type": "boolean", "const": false},
+    "disabled_by_default": {"type": "boolean", "const": true},
+    "mode": {"type": "string", "const": "design_only_exact_allowlist"},
+    "requires": {"type": "array", "items": {"type": "string"}},
+    "allowed_paths": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "projects/{project}/p3/{run}/draft/BRIEF.md",
+          "projects/{project}/p3/{run}/draft/TASKLIST.md",
+          "projects/{project}/p3/{run}/draft/results/*.md",
+          "projects/{project}/p3/{run}/reports/gates/*.md",
+          "projects/{project}/p3/{run}/reports/AUDIT.jsonl",
+          "projects/{project}/p3/{run}/approved/FINAL.md",
+          "projects/{project}/state.md"
+        ]
+      }
+    }
+  }
+}

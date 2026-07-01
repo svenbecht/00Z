@@ -1,0 +1,76 @@
+gate: pipeline
+version: "1.1"
+status: active
+purpose: "Validiert P1/P2/P3-Pipelines, Persistenzregeln, Registry-Agenten und Force-Gates."
+on_fail: BLOCKED
+
+inputs:
+  pipelines: [harness/pipelines/p1.yaml, harness/pipelines/p2.yaml, harness/pipelines/p3.yaml]
+  registry: agents/agent_registry.yaml
+  state_machine: harness/state_machine.yaml
+
+severity: critical
+
+checks:
+  p3_security_contract:
+    severity: critical
+    file: harness/pipelines/p3.yaml
+    require:
+      max_agents: 3
+      force_gate: true
+      write_mode: persist_only_after_force_gate_approved
+      security_gates: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+    fail_if: [p3_max_agents_gt_3, p3_force_gate_disabled, p3_missing_security_gate, p3_wrong_write_mode]
+  no_persist_before_force_gate:
+    severity: critical
+    applies_to: [p2, p3]
+    require_final_approval_before_write: true
+    fail_if: [persist_before_force_gate]
+  task_artifacts_are_untrusted_until_gate:
+    severity: high
+    artifacts: [brief, tasklist, task_results, final_draft]
+    require_trust_label: untrusted_context
+    fail_if: [artifact_trusted_before_gate]
+    on_fail: require_review
+  max_rework_cycles:
+    severity: high
+    p3_max: 2
+    fail_if: [p3_rework_gt_2]
+
+cross_file_checks:
+  state_machine_pipeline_routes_exist:
+    source: harness/state_machine.yaml
+    triggers: [ZEN P1, ZEN P2, ZEN P3]
+    fail_if: [missing_pipeline_route, missing_pipeline_file]
+  p3_agents_in_registry:
+    source: agents/agent_registry.yaml
+    required_agent_names: [PromptEngineerAgent, TasklistAgent, RubberDuckAgent]
+    required_files: [agents/system/prompt-engineer.agent.md, agents/system/tasklist.agent.md, agents/system/rubber-duck.agent.md]
+    fail_if: [p3_agent_missing_from_registry, p3_agent_file_missing]
+  p3_registry_tools_are_readonly:
+    source: agents/agent_registry.yaml
+    agents: [PromptEngineerAgent, TasklistAgent, RubberDuckAgent]
+    allowed_tools_subset: [read, grep, find, ask_user]
+    fail_if: [p3_system_agent_has_mutating_tool]
+  reasoning_routing_present:
+    required: [harness/reasoning/reasoning_catalog.yaml, harness/reasoning/reasoning_routing.yaml, harness/reasoning/reasoning_output.schema.json]
+    fail_if: [missing_reasoning_routing]
+
+fail_conditions:
+  - p3_max_agents_gt_3
+  - p3_force_gate_disabled
+  - p3_missing_security_gate
+  - p3_wrong_write_mode
+  - persist_before_force_gate
+  - p3_rework_gt_2
+  - missing_pipeline_route
+  - missing_pipeline_file
+  - p3_agent_missing_from_registry
+  - p3_agent_file_missing
+  - p3_system_agent_has_mutating_tool
+  - missing_reasoning_routing
+
+output_report:
+  path: validation/reports/pipeline-gate.report.md
+  required_fields: [gate, status, pipelines_checked, registry_checks, failures, warnings, evidence, next_action]
+  status_values: [PASS, WARN, FAIL]

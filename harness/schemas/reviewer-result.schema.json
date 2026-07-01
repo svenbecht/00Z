@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/reviewer-result.schema.json",
+  "title": "00Z reviewer result schema",
+  "type": "object",
+  "required": ["schemaVersion", "reviewer", "verdict", "findings"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reviewer": { "enum": ["security", "code-quality", "docs", "pipeline", "reasoning"] },
+    "verdict": { "enum": ["lgtm", "suggestions", "warnings", "critical"] },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "category", "title", "evidence", "recommendation", "confidence", "source", "domain", "fingerprint"],
+        "additionalProperties": false,
+        "properties": {
+          "severity": { "enum": ["suggestion", "warning", "critical"] },
+          "category": { "enum": ["security", "code-quality", "docs", "pipeline", "reasoning", "release", "compliance"] },
+          "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "file": { "type": "string", "minLength": 1 },
+          "line": { "type": "integer", "minimum": 1 },
+          "evidence": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "recommendation": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "confidence": { "enum": ["low", "medium", "high"] },
+          "source": { "enum": ["diff", "file", "test", "manifest", "contextFreshnessSignals", "reviewer-inference"] },
+          "domain": { "enum": ["security", "code-quality", "docs", "pipeline", "reasoning"] },
+          "blockingReason": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{16}$" }
+        }
+      }
+    }
+  }
+}

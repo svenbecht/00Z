@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/confirmation-report.schema.json",
+  "title": "00Z controlled confirmation report schema",
+  "description": "Boundary-test artifact only. effective_confirmation=true is scoped exclusively to validation/reports controlled write testing. not_project_authorization=true and production_scope=false mean this is never a productive project authorization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["confirmation_id", "run_id", "actor", "scope", "risk_level", "target_paths", "issued_at", "expires_at", "decision", "effective_confirmation", "not_project_authorization", "production_scope", "redacted", "schema"],
+  "properties": {
+    "confirmation_id": {"type": "string", "pattern": "^hitl_[0-9]{8}T[0-9]{6}Z_[A-Za-z0-9_-]{6,}$"},
+    "run_id": {"type": "string", "minLength": 1},
+    "actor": {"type": "string", "const": "tools/zen_execute.py"},
+    "scope": {"type": "string", "minLength": 1},
+    "risk_level": {"type": "string", "enum": ["medium", "high", "critical"]},
+    "target_paths": {"type": "array", "items": {"type": "string"}},
+    "issued_at": {"type": "string", "minLength": 1},
+    "expires_at": {"type": "string", "minLength": 1},
+    "decision": {"type": "string", "enum": ["approved_for_boundary_test"]},
+    "effective_confirmation": {"description": "True only for controlled report-boundary test semantics; never authorizes project mutation.", "type": "boolean", "const": true},
+    "not_project_authorization": {"description": "Must remain true; this report is not a productive project authorization.", "type": "boolean", "const": true},
+    "production_scope": {"description": "Must remain false; boundary-test scope only.", "type": "boolean", "const": false},
+    "redacted": {"type": "boolean", "const": true},
+    "schema": {"type": "string", "const": "harness/schemas/confirmation-report.schema.json"}
+  }
+}

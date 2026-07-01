@@ -1,0 +1,69 @@
+gate: filesystem
+version: "1.1"
+status: active
+purpose: "Erzwingt Workspace-Sandbox, Pfad-Kanonisierung und Schreibschutz."
+on_fail: BLOCKED
+
+inputs:
+  policy: harness/policies/filesystem.yaml
+  protected_policy: harness/policies/protected_paths.yaml
+  workspace_root: "."
+  tools: [read, grep, find, write, edit, bash]
+
+severity: critical
+
+checks:
+  path_inside_workspace:
+    severity: critical
+    require_realpath: true
+    fail_if: [realpath_outside_workspace]
+  no_path_traversal:
+    severity: critical
+    blocked_patterns: ["../", "..\\"]
+    fail_if: [path_traversal_pattern]
+  no_symlink_escape:
+    severity: critical
+    check_symlink_target: true
+    fail_if: [symlink_target_outside_workspace]
+  protected_paths_not_mutated:
+    severity: critical
+    protected: [.env*, .git/**, core/SOUL.md, SECURITY.md, harness/policies/**, validation/**]
+    mutating_tools: [write, edit, bash]
+    fail_if: [protected_path_mutation]
+  write_requires_read_first:
+    severity: high
+    tools: [write, edit]
+    fail_if: [write_without_prior_read]
+    on_fail: require_review
+  pipeline_artifacts_stay_in_project_scope:
+    severity: critical
+    allowed_artifact_roots: [projects/**/p1/**, projects/**/p2/**, projects/**/p3/**, prompts/snapshot/**]
+    fail_if: [artifact_outside_allowed_root]
+  reasoning_and_adapter_config_are_protected:
+    severity: high
+    protected: [harness/reasoning/**, adapters/**]
+    mutating_tools: [write, edit]
+    requires: [explicit_user_request, policy_gate]
+    fail_if: [config_mutation_without_policy_gate]
+
+cross_file_checks:
+  protected_paths_match_policy:
+    source: harness/policies/protected_paths.yaml
+    fail_if: [validation_missing_protected_path]
+  filesystem_policy_root_matches_gate:
+    source: harness/policies/filesystem.yaml
+    key: workspace_root
+    fail_if: [workspace_root_mismatch]
+
+fail_conditions:
+  - realpath_outside_workspace
+  - path_traversal_pattern
+  - symlink_target_outside_workspace
+  - protected_path_mutation
+  - artifact_outside_allowed_root
+  - workspace_root_mismatch
+
+output_report:
+  path: validation/reports/filesystem-gate.report.md
+  required_fields: [gate, status, checked_paths, protected_paths, failures, warnings, evidence, next_action]
+  status_values: [PASS, WARN, FAIL]

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/real-confirmation.schema.json",
+  "title": "00Z real project write confirmation schema",
+  "description": "Design-only schema for future productive writes. Not active until explicit ADR/User approval enables project write boundary.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["confirmation_id", "actor", "scope", "approved_paths", "expires_at", "risk_level", "decision", "redacted", "explicit_user_approval_required"],
+  "properties": {
+    "confirmation_id": {"type": "string", "pattern": "^hitl_[0-9]{8}T[0-9]{6}Z_[A-Za-z0-9_-]{6,}$"},
+    "actor": {"type": "string", "minLength": 1},
+    "scope": {"type": "string", "minLength": 1},
+    "approved_paths": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^projects/[^/]+/(p3/[^/]+/(draft|approved|reports|archive|rejected)/.*|state\\.md)$"}},
+    "expires_at": {"type": "string", "minLength": 1},
+    "risk_level": {"type": "string", "enum": ["high", "critical"]},
+    "decision": {"type": "string", "enum": ["approved_for_project_write"]},
+    "redacted": {"type": "boolean", "const": true},
+    "explicit_user_approval_required": {"type": "boolean", "const": true}
+  }
+}

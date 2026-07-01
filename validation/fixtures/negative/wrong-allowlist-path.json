@@ -1,0 +1,8 @@
+{
+  "case": "wrong-allowlist-path",
+  "category": "allowlist",
+  "simulated_target_path": "projects/sample/p3/run-001/unlisted/OUTPUT.md",
+  "expected_status": "BLOCKED",
+  "expected_reason": "target path is outside the exact productive project write allowlist",
+  "writes_performed": []
+}

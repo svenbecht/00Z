@@ -1,0 +1,58 @@
+version: "1.0"
+updated: "2026-05-21"
+purpose: "Schnelles Agent-Routing ohne Verzeichnis-Scan"
+trigger_authority: "harness/state_machine.yaml"
+
+defaults:
+  language: de
+  evidence_required: true
+  reveal_chain_of_thought: false
+  max_handoff_tokens: 1500
+  handoff_mode: "summary_plus_references"
+  reasoning_output_schema: "harness/reasoning/reasoning_output.schema.json"
+  allowed_tools_default: [read, grep, find, ask_user]
+
+agents:
+  - id: orchestrator
+    name: "ZEN Orchestrator"
+    file: "core/ORCHESTRATOR.md"
+    type: orchestrator
+    context_profile: boot
+    allowed_tools: [read, grep, find, ask_user]
+    triggers: ["ZEN NEW", "ZEN MEMORY INIT", "ZEN NEW BUILD", "ZEN STATUS", "ZEN PLAN", "ZEN SNAPSHOT", "ZEN P1", "ZEN P2", "ZEN P3", "ZEN RESET", "ZEN VALIDATE"]
+    max_tokens: 2500
+    reasoning_profile: standard
+    reasoning_methods: [context_budget_check]
+
+  - id: prompt_engineer
+    name: "PromptEngineerAgent"
+    file: "agents/system/prompt-engineer.agent.md"
+    type: proactive
+    context_profile: p3
+    allowed_tools: [read, grep, find, ask_user]
+    triggers: ["P3_PROMPT_BRIEF", "PROMPT_ENGINEER_START"]
+    max_tokens: 2500
+    reasoning_profile: complex
+    reasoning_methods: [decomposition, self_critique]
+
+  - id: tasklist
+    name: "TasklistAgent"
+    file: "agents/system/tasklist.agent.md"
+    type: orchestrator
+    context_profile: p3
+    allowed_tools: [read, grep, find, ask_user]
+    triggers: ["P3_TASKLIST", "TASKLIST_START"]
+    max_tokens: 2500
+    reasoning_profile: complex
+    reasoning_methods: [decomposition, mid_trajectory_validation]
+
+  - id: rubber_duck
+    name: "RubberDuckAgent"
+    file: "agents/system/rubber-duck.agent.md"
+    type: validator
+    context_profile: audit
+    allowed_tools: [read, grep, find, ask_user]
+    triggers: ["P3_GATE", "FORCE_GATE", "RUBBER_DUCK_REVIEW"]
+    max_tokens: 3000
+    reasoning_profile: critical
+    reasoning_methods: [verification, risk_gate, meta_cognitive_summary]

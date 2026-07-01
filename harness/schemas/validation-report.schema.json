@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/validation-report.schema.json",
+  "title": "ZEN VALIDATE report schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["status", "generated", "mode", "summary", "results", "scan_metrics"],
+  "properties": {
+    "status": { "type": "string", "enum": ["PASS", "WARN", "FAIL"] },
+    "generated": { "type": "string" },
+    "mode": { "type": "string", "const": "read-only" },
+    "root": { "type": "string" },
+    "secret_handling": { "type": "string" },
+    "summary": {
+      "type": "object",
+      "required": ["PASS", "WARN", "FAIL"],
+      "properties": {
+        "PASS": { "type": "integer", "minimum": 0 },
+        "WARN": { "type": "integer", "minimum": 0 },
+        "FAIL": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["status", "check", "detail"],
+        "properties": {
+          "status": { "type": "string", "enum": ["PASS", "WARN", "FAIL"] },
+          "check": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "scan_metrics": { "type": "object" }
+  }
+}

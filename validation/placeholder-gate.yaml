@@ -1,0 +1,59 @@
+gate: placeholder
+version: "1.1"
+status: active
+purpose: "Blockiert Runtime-Platzhalter außerhalb expliziter Template-Zonen."
+on_fail: BLOCKED
+
+inputs:
+  scan_roots: [SECURITY.md, README.md, core, harness, validation, adapters, agents, skills, docs]
+  pattern: "\\{\\{[^}]+\\}\\}"
+
+severity: critical
+
+scope:
+  blocked_active_paths:
+    - SECURITY.md
+    - README.md
+    - core/**
+    - harness/**
+    - validation/**
+    - adapters/**
+    - agents/**
+    - skills/**
+    - docs/**
+  allowed_template_paths:
+    - agents/templates/**
+    - skills/templates/**
+    - prompts/templates/**
+    - projects/templates/**
+    - prompts/**/template/**
+    - docs/examples/**
+
+checks:
+  active_config_must_not_contain_placeholders:
+    severity: critical
+    fail_if: placeholder_match_in_blocked_active_path
+  generated_artifacts_must_not_contain_unresolved_security_placeholders:
+    severity: high
+    keywords: [SECRET, TOKEN, PASSWORD, POLICY, PATH, TOOL]
+    fail_if: security_keyword_placeholder_in_generated_artifact
+    on_fail: require_review
+  pipelines_reasoning_adapters_no_runtime_placeholders:
+    severity: critical
+    paths: [harness/pipelines/**, harness/reasoning/**, adapters/**]
+    fail_if: placeholder_match
+  template_zone_must_be_explicit:
+    severity: medium
+    fail_if: placeholder_match_in_unlisted_template_zone
+    on_fail: WARN
+
+fail_conditions:
+  - placeholder_match_in_blocked_active_path
+  - security_keyword_placeholder_in_generated_artifact
+  - placeholder_match_in_pipeline_reasoning_or_adapter
+
+output_report:
+  path: validation/reports/placeholder-gate.report.md
+  required_fields: [gate, status, matches, allowed_matches, blocked_matches, failures, warnings, next_action]
+  status_values: [PASS, WARN, FAIL]
+  evidence_format: "relative_path:line:placeholder"

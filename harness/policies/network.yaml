@@ -1,0 +1,30 @@
+policy: network
+version: "1.0"
+status: active
+principle: no_network_by_default
+
+default: disabled
+allowed: []
+
+blocked_tools:
+  - curl
+  - wget
+  - nc
+  - netcat
+  - ssh
+  - scp
+  - rsync
+  - browser
+
+requires_confirmation: true
+requires_policy_exception: true
+exception_requirements:
+  - explicit_user_request
+  - documented_destination
+  - no_secret_payload
+  - timeout_defined
+  - audit_entry
+
+on_violation:
+  status: BLOCKED
+  message: "Network access blocked by harness/policies/network.yaml"

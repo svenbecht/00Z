@@ -1,0 +1,8 @@
+{
+  "case": "p3-run-directory-without-approval",
+  "category": "p3-artifact-boundary",
+  "simulated_target_path": "projects/sample/p3/run-001/",
+  "expected_status": "BLOCKED",
+  "expected_reason": "P3 run directory creation requires explicit approval and READY_MUTATING",
+  "writes_performed": []
+}

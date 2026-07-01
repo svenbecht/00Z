@@ -1,0 +1,8 @@
+{
+  "case": "report-path-traversal",
+  "category": "filesystem",
+  "simulated_report_path": "validation/reports/../outside.preview.json",
+  "expected_status": "BLOCKED",
+  "expected_reason": "report path must remain under validation/reports/ without traversal",
+  "writes_performed": []
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/audit-preview.schema.json",
+  "title": "00Z executor audit preview schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["timestamp", "run_id", "actor", "event_type", "target_paths", "risk_level", "trust_zone", "decision", "result", "redacted", "mode", "writes_performed"],
+  "properties": {
+    "timestamp": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "actor": {"type": "string", "const": "tools/zen_execute.py"},
+    "event_type": {"type": "string", "enum": ["pipeline_run", "tool_call", "gate_decision", "hitl_confirmation", "policy_block"]},
+    "target_paths": {"type": "array", "items": {"type": "string"}},
+    "risk_level": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+    "trust_zone": {"type": "string", "minLength": 1},
+    "decision": {"type": "string", "minLength": 1},
+    "result": {"type": "string", "minLength": 1},
+    "redacted": {"type": "boolean", "const": true},
+    "mode": {"type": "string", "const": "dry-run"},
+    "writes_performed": {"type": "array", "maxItems": 0},
+    "hitl_preview": {"type": "object"},
+    "audit_append_simulation": {"type": "object"}
+  }
+}

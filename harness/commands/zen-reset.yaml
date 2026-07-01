@@ -1,0 +1,34 @@
+id: zen-reset
+version: 0.2.0
+status: ready
+mode: guarded
+purpose: "Aktuellen Run logisch abbrechen und in sicheren Read-only-Zustand zurückführen; keine Dateien löschen."
+run_state_transition:
+  start_from: [RUNNING, VALIDATING, BLOCKED, FAILED, DONE, READY_READONLY, READY_MUTATING]
+  on_start: RUNNING
+  on_success: READY_READONLY
+  on_blocked: BLOCKED
+  on_failure: FAILED
+mutation:
+  required_state: null
+  allowed: false
+  destructive_actions_allowed: false
+preconditions:
+  - policy_gate
+  - no_destructive_actions
+inputs:
+  - reset_reason
+outputs:
+  - reset_summary
+reads:
+  - harness/state_machine.yaml
+  - harness/runtime.yaml
+  - projects/*/state.md
+writes: []
+gates:
+  before_start: [policy_gate]
+  before_write: []
+failure_modes:
+  - destructive_reset_requested: BLOCKED
+  - policy_missing: BLOCKED
+notes: "ZEN RESET ist ein logischer Session-Reset; kein rm, keine Deletes, keine Git-Aktionen."

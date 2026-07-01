@@ -1,0 +1,9 @@
+{
+  "case": "project-write-without-approval",
+  "category": "productive-write-boundary",
+  "simulated_target_path": "projects/sample/state.md",
+  "simulated_state": "READY_READONLY",
+  "expected_status": "BLOCKED",
+  "expected_reason": "explicit user approval and READY_MUTATING are missing",
+  "writes_performed": []
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/reasoning_output.schema.json",
+  "title": "ZEN Reasoning Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "agent_id",
+    "complexity",
+    "selected_methods",
+    "zielverstaendnis",
+    "evidenzbasis",
+    "annahmen",
+    "risiken",
+    "validierung",
+    "hitl_required",
+    "hitl_punkt",
+    "result_status"
+  ],
+  "properties": {
+    "task_id": {"type": "string", "minLength": 1},
+    "agent_id": {"type": "string", "minLength": 1},
+    "complexity": {"type": "string", "enum": ["simple", "standard", "complex", "critical"]},
+    "selected_methods": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {"type": "string"}
+    },
+    "zielverstaendnis": {"type": "string", "maxLength": 700},
+    "evidenzbasis": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim", "basis"],
+        "properties": {
+          "claim": {"type": "string", "maxLength": 300},
+          "basis": {"type": "string", "maxLength": 300}
+        }
+      }
+    },
+    "annahmen": {"type": "array", "maxItems": 5, "items": {"type": "string", "maxLength": 250}},
+    "risiken": {"type": "array", "maxItems": 5, "items": {"type": "string", "maxLength": 250}},
+    "validierung": {"type": "string", "maxLength": 700},
+    "hitl_required": {"type": "boolean"},
+    "hitl_punkt": {"type": "string", "maxLength": 500},
+    "result_status": {"type": "string", "enum": ["done", "partial", "blocked", "needs_review"]},
+    "no_chain_of_thought_disclosure": {"type": "boolean", "const": true}
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/hitl-preview.schema.json",
+  "title": "00Z HITL preview schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["confirmation_id", "run_id", "actor", "scope", "risk_level", "target_paths", "expires_at", "decision", "effective_confirmation", "redacted", "preview_only"],
+  "properties": {
+    "confirmation_id": {"type": "string", "pattern": "^hitl_[0-9]{8}T[0-9]{6}Z_[A-Za-z0-9_-]{6,}$"},
+    "run_id": {"type": "string", "minLength": 1},
+    "actor": {"type": "string", "const": "tools/zen_execute.py"},
+    "scope": {"type": "string", "minLength": 1},
+    "risk_level": {"type": "string", "enum": ["medium", "high", "critical"]},
+    "target_paths": {"type": "array", "items": {"type": "string"}},
+    "expires_at": {"type": "string", "minLength": 1},
+    "decision": {"type": "string", "const": "preview_only"},
+    "effective_confirmation": {"type": "boolean", "const": false},
+    "redacted": {"type": "boolean", "const": true},
+    "preview_only": {"type": "boolean", "const": true},
+    "schema": {"type": "string", "const": "harness/schemas/hitl-preview.schema.json"}
+  }
+}

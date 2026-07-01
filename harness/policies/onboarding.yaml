@@ -1,0 +1,77 @@
+policy: onboarding
+version: "1.0"
+status: active
+principle: no_mutation_before_ready
+
+states:
+  INIT_REQUIRED:
+    allowed_tools: [read, grep, find, ls]
+    mutating_tools: denied
+  CONFIG_INCOMPLETE:
+    allowed_tools: [read, grep, find, ls]
+    mutating_tools: denied
+  READY_READONLY:
+    allowed_tools: [read, grep, find, ls]
+    mutating_tools: denied
+  READY_MUTATING:
+    allowed_tools: [read, grep, find, ls, write, edit]
+    mutating_tools: gated
+
+critical_files:
+  - SECURITY.md
+  - core/BOOT_PROTOCOL.md
+  - harness/runtime.yaml
+  - harness/policies/filesystem.yaml
+  - harness/policies/protected_paths.yaml
+  - harness/policies/secrets.yaml
+  - harness/policies/network.yaml
+  - harness/policies/shell.yaml
+  - harness/policies/tools.yaml
+  - harness/policies/prompt-injection.yaml
+  - validation/placeholder-gate.yaml
+  - validation/policy-gate.yaml
+  - validation/onboarding-gates.yaml
+  - validation/secret-gates.yaml
+  - validation/filesystem-gates.yaml
+  - validation/prompt-injection-gates.yaml
+  - validation/adapter-gate.yaml
+  - validation/pipeline-gate.yaml
+  - harness/pipelines/p1.yaml
+  - harness/pipelines/p2.yaml
+  - harness/pipelines/p3.yaml
+  - harness/reasoning/reasoning_catalog.yaml
+  - harness/reasoning/reasoning_routing.yaml
+  - harness/reasoning/reasoning_output.schema.json
+  - adapters/pi/adapter.yaml
+  - adapters/claude/adapter.yaml
+
+placeholder_rules:
+  pattern: "\\{\\{[^}]+\\}\\}"
+  allowed_template_paths:
+    - prompts/**/template/**
+    - docs/examples/**
+  blocked_active_paths:
+    - SECURITY.md
+    - core/**
+    - harness/**
+    - validation/**
+    - adapters/**
+    - agents/**
+    - skills/**
+    - harness/pipelines/**
+    - harness/reasoning/**
+
+required_user_gate:
+  guide: docs/onboarding.md
+  must_pass_before: [ZEN_NEW_BUILD, ZEN_P1, ZEN_P2, ZEN_P3, persist_artifact]
+  fallback_state: READY_READONLY
+
+reasoning_safety:
+  reveal_chain_of_thought: false
+  persist_private_scratchpad: false
+  allowed_external_outputs: [decision_summary, concise_rationale, evidence, assumptions, risks, validation_summary, hitl_point]
+
+on_failure:
+  status: BLOCKED
+  action: deny_mutating_tools
+  message: "Onboarding incomplete; resolve placeholders and required files first."

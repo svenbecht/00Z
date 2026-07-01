@@ -1,0 +1,258 @@
+runtime:
+  mode: local-first
+  default_language: de
+  read_before_write: true
+  dry_run_supported: true
+  destructive_requires_confirmation: true
+  unknown_tools_policy: deny
+
+run_state_model:
+  source: harness/state_machine.yaml#run_state_model
+  states: [INIT_REQUIRED, CONFIG_INCOMPLETE, READY_READONLY, READY_MUTATING, VALIDATING, RUNNING, BLOCKED, DONE, FAILED]
+  initial: INIT_REQUIRED
+  default_before_validation: READY_READONLY
+  mutation_requires_state: READY_MUTATING
+  validation_state: VALIDATING
+  running_state: RUNNING
+  terminal_states: [DONE, BLOCKED, FAILED]
+  readonly_states: [INIT_REQUIRED, CONFIG_INCOMPLETE, READY_READONLY, VALIDATING, BLOCKED, FAILED]
+  transitions:
+    boot:
+      missing_required_config: INIT_REQUIRED
+      incomplete_config: CONFIG_INCOMPLETE
+      gates_pass_readonly: READY_READONLY
+    validation:
+      start: VALIDATING
+      pass_or_warn: READY_READONLY
+      fail: BLOCKED
+    mutation:
+      gates_pass: READY_MUTATING
+      policy_block: BLOCKED
+    pipeline:
+      start: RUNNING
+      success: DONE
+      blocked: BLOCKED
+      failure: FAILED
+  gates:
+    readonly_required: [required_files_exist, placeholder_gate, policy_gate, adapter_gate]
+    mutating_required: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+    p3_required: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate, force_gate]
+
+context:
+  manifest: harness/context_manifest.yaml
+  budget_policy: harness/budget_policy.yaml
+  cache_policy: harness/cache_policy.yaml
+  boot_profile: boot
+  use_summaries_first: true
+  compact_at_context_usage_percent: 70
+  force_snapshot_at_context_usage_percent: 85
+  load_full_file_only_if:
+    - summary_missing
+    - summary_stale
+    - user_requests_detail
+    - exact_content_required
+
+performance:
+  lazy_load_docs: true
+  prefer_native_tools: true
+  avoid_full_repo_reads: true
+  avoid_duplicate_artifact_context: true
+  handoff_mode: summary_plus_references
+  max_parallel_agents: 3
+  max_rework_cycles: 2
+  memory_rolling_reflections: 8
+  cache_hit_rate_target: 0.70
+
+artifact_lifecycle:
+  source: harness/pipelines/p3.yaml#artifacts
+  states: [transient, draft, approved, persisted, archived, rejected]
+  zones:
+    draft: projects/{project}/p3/{date}_{sequence}/draft/
+    approved: projects/{project}/p3/{date}_{sequence}/approved/
+    report: projects/{project}/p3/{date}_{sequence}/reports/
+    snapshot: prompts/snapshot/
+    archived: projects/{project}/p3/{date}_{sequence}/archive/
+    rejected: projects/{project}/p3/{date}_{sequence}/rejected/
+  persistence_rules:
+    ready_readonly: intake_dry_run_plan_only
+    draft_write_requires: [READY_MUTATING, filesystem_gate, secret_gate, prompt_injection_gate, confirmation]
+    approved_requires: [force_gate]
+    persisted_requires: [approved, filesystem_gate, secret_gate, prompt_injection_gate]
+    archive_requires: [explicit_user_confirmation]
+
+executor_runtime:
+  tool: tools/zen_execute.py
+  default_mode: dry_run
+  source_read_only: true
+  writes_project_artifacts: false
+  writes_audit_log: false
+  audit_preview_stdout: true
+  audit_preview_schema: harness/schemas/audit-preview.schema.json
+  controlled_report_mode:
+    option: --write-report
+    default_path: validation/reports/zen-execute.preview.json
+    allowed_glob: validation/reports/*.preview.json
+    suffix: .preview.json
+    no_project_artifacts: true
+  hitl_preview:
+    option: --preview-hitl
+    write_option: --write-hitl-preview
+    schema: harness/schemas/hitl-preview.schema.json
+    report_path: validation/reports/zen-execute.hitl-preview.json
+    allowed_glob: validation/reports/*.hitl-preview.json
+    no_write_by_default: true
+    decision: preview_only
+    effective_confirmation: false
+    id_format: hitl_YYYYMMDDTHHMMSSZ_suffix
+  audit_append_simulation:
+    option: --simulate-audit-append
+    effective_append: false
+    project_audit_log_write: false
+  productive_write_boundary:
+    enabled: false
+    disabled_by_default: true
+    adr: docs/adr/ADR-productive-write-boundary.md
+    explain_flag: --explain-project-write-boundary
+    blocked_attempt_flag: --attempt-project-write
+    real_confirmation_schema: harness/schemas/real-confirmation.schema.json
+    project_write_allowlist_schema: harness/schemas/project-write-allowlist.schema.json
+    atomic_audit_append_schema: harness/schemas/atomic-audit-append.schema.json
+    activation_requires: [explicit_user_approval, READY_MUTATING, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate, real_hitl_confirmation, atomic_audit_trail, rubber_duck_approval]
+    allowed_when_disabled: [explain_only, blocked_attempt_only]
+    productive_project_writes: disabled
+  controlled_write_boundary:
+    confirmation_report:
+      option: --write-confirmation-report
+      schema: harness/schemas/confirmation-report.schema.json
+      allowed_glob: validation/reports/*.confirmation.json
+      effective_confirmation: true
+      not_project_authorization: true
+      production_scope: false
+    audit_preview_append:
+      option: --append-audit-preview
+      schema: harness/schemas/audit-preview-event.schema.json
+      allowed_glob: validation/reports/*.audit-preview.jsonl
+      not_project_audit: true
+    run_manifest_preview:
+      option: --write-run-manifest-preview
+      schema: harness/schemas/run-manifest-preview.schema.json
+      allowed_glob: validation/reports/*.run-manifest.preview.json
+      not_project_manifest: true
+  allowed_inputs: [ZEN_COMMAND, pipeline_id]
+  forbidden_actions: [project_artifact_write, audit_log_append, delete, git, dependency_install, env_read, p3_run_directory_create]
+  future_write_boundary: requires_READY_MUTATING_plus_gates_plus_hitl
+
+audit_model:
+  schema: harness/schemas/audit.schema.json
+  log_path: projects/{project}/p3/{date}_{sequence}/reports/AUDIT.jsonl
+  event_types: [pipeline_run, tool_call, gate_decision, hitl_confirmation, policy_block]
+  required_fields: [timestamp, run_id, actor, event_type, target_paths, risk_level, trust_zone, decision, result, redacted]
+  redaction_required: true
+  no_secret_values: true
+  append_only: true
+  dry_run_preview_only_until_executor_write_boundary: true
+
+run_manifest_model:
+  schema: harness/schemas/run-manifest.schema.json
+  pipeline: p3
+  dry_run_default: true
+  no_run_directory_in_dry_run: true
+  required_fields: [run_id, project, pipeline, run_state, artifact_lifecycle, artifact_zones, audit_log, dry_run, redacted]
+
+hitl_confirmation_model:
+  schema: harness/schemas/hitl-confirmation.schema.json
+  id_format: hitl_YYYYMMDDTHHMMSSZ_suffix
+  required_for: [high_risk_write, critical_risk_write, p3_persist, archive, policy_change]
+  must_include: [confirmation_id, run_id, actor, scope, risk_level, target_paths, expires_at, decision, redacted]
+  no_secret_values: true
+
+pipelines:
+  p1:
+    max_agents: 1
+    max_rework_cycles: 0
+    force_gate: false
+    token_budget: 4000
+  p2:
+    max_agents: 1
+    max_rework_cycles: 1
+    force_gate: false
+    token_budget: 7000
+  p3:
+    max_agents: 3
+    max_rework_cycles: 2
+    force_gate: true
+    token_budget: 12000
+    handoff_mode: summary_plus_references
+
+tooling:
+  preferred_read_tools: [read, grep, find]
+  gated_write_tools: [write, edit]
+  restricted_tools: [bash, network]
+  destructive_requires_confirmation: true
+  network_default: disabled
+
+reasoning:
+  catalog: harness/reasoning/reasoning_catalog.yaml
+  routing: harness/reasoning/reasoning_routing.yaml
+  output_schema: harness/reasoning/reasoning_output.schema.json
+  reveal_chain_of_thought: false
+  external_output: concise_rationale_only
+  max_optional_methods: 3
+
+slo:
+  boot_context_tokens_max: 3000
+  p1_tokens_max: 4000
+  p2_tokens_max: 7000
+  p3_tokens_max: 12000
+  audit_tokens_max: 16000
+  max_agent_handoff_tokens: 1500
+  max_reasoning_output_tokens: 500
+  cache_hit_rate_target: 0.70
+
+readiness:
+  checklist: docs/readiness.md
+  adapter_smoke_tool: tools/zen_adapter_smoke.py
+  required_check_only_commands:
+    - python3 tools/zen_validate.py --check-only
+    - python3 tools/zen_test_negative.py --check-only
+    - python3 tools/zen_test_all.py --check-only
+    - python3 tools/zen_adapter_smoke.py --check-only
+  adapter_contracts_required: [BLOCKED, WARN, PASS, no_cot, no_env, no_project_write, native_runtime_false]
+  productive_writes_remain_disabled: true
+
+validation:
+  command: ZEN VALIDATE
+  gate_order:
+    - validation/schema-gate.yaml
+    - validation/placeholder-gate.yaml
+    - validation/policy-gate.yaml
+    - validation/onboarding-gates.yaml
+    - validation/secret-gates.yaml
+    - validation/filesystem-gates.yaml
+    - validation/prompt-injection-gates.yaml
+    - validation/adapter-gate.yaml
+    - validation/pipeline-gate.yaml
+    - validation/performance-gate.yaml
+  command_spec: harness/commands/zen-validate.yaml
+  performance_gate_required: true
+  report_mode: integrated_into_zen_validate_report
+  integrated_check_id: performance_budget
+  standalone_report_path_reserved: "validation/reports/performance-gate.report.md"
+  temporary_cache_report_path: "harness/.cache/performance-gate-report.md"
+
+alerts:
+  - id: boot_context_too_large
+    condition: "boot_context_tokens > 5000"
+    severity: warning
+  - id: p3_budget_exceeded
+    condition: "p3_tokens > 15000"
+    severity: critical
+  - id: uncached_large_file
+    condition: "file_tokens > 2000 and cache == false"
+    severity: warning
+  - id: agent_without_tool_policy
+    condition: "agent.allowed_tools missing"
+    severity: critical
+  - id: reasoning_over_budget
+    condition: "reasoning_output_tokens > 700"
+    severity: warning

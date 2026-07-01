@@ -1,0 +1,269 @@
+version: "1.0"
+updated: "2026-05-21"
+purpose: "Budgetiertes Context-Loading für 00Z"
+
+estimation:
+  token_estimator: "words * 1.3"
+  count_strategy: "approximate_until_measured"
+  missing_file_policy: "skip_with_warning"
+
+defaults:
+  use_summaries_first: true
+  max_file_tokens_without_summary: 1200
+  max_file_tokens_hard: 3000
+  large_file_action: "load_summary_then_ask"
+  exact_content_required_for:
+    - editing
+    - schema_validation
+    - security_policy
+    - tool_permissions
+    - user_quoted_file
+
+load_profiles:
+  boot:
+    max_tokens: 3000
+    strategy: "priority_then_budget"
+    drop_priorities_above: 2
+  p1:
+    max_tokens: 4000
+    strategy: "minimal_plus_task"
+  p2:
+    max_tokens: 7000
+    strategy: "target_agent_plus_brief"
+  p3:
+    max_tokens: 12000
+    strategy: "summary_handoffs_first"
+  audit:
+    max_tokens: 16000
+    strategy: "evidence_first"
+
+files:
+  - id: soul
+    path: "core/SOUL.md"
+    role: "core_identity"
+    priority: 0
+    load_policy: "always"
+    max_tokens: 800
+    cache: false
+
+  - id: boot_protocol
+    path: "core/BOOT_PROTOCOL.md"
+    role: "boot"
+    priority: 0
+    load_policy: "always"
+    max_tokens: 1000
+    cache: true
+    summary_path: ".pi/cache/summaries/core_BOOT_PROTOCOL.summary.md"
+
+  - id: runtime
+    path: "harness/runtime.yaml"
+    role: "runtime_policy"
+    priority: 0
+    load_policy: "always"
+    max_tokens: 900
+    cache: false
+
+  - id: budget_policy
+    path: "harness/budget_policy.yaml"
+    role: "budget_policy"
+    priority: 0
+    load_policy: "always"
+    max_tokens: 900
+    cache: false
+
+  - id: cache_policy
+    path: "harness/cache_policy.yaml"
+    role: "cache_policy"
+    priority: 1
+    load_policy: "boot"
+    max_tokens: 900
+    cache: false
+
+  - id: agent_registry
+    path: "agents/agent_registry.yaml"
+    role: "agent_index"
+    priority: 1
+    load_policy: "always"
+    max_tokens: 1200
+    cache: true
+    summary_path: ".pi/cache/summaries/agents_agent_registry.summary.md"
+
+  - id: reflection_hot
+    path: "kontext/memory/hot/reflection_hot.md"
+    role: "memory_hot"
+    priority: 1
+    load_policy: "always"
+    max_tokens: 500
+    cache: false
+
+  - id: todos_hot
+    path: "kontext/memory/hot/todos_hot.md"
+    role: "memory_hot"
+    priority: 1
+    load_policy: "always"
+    max_tokens: 600
+    cache: false
+
+  - id: semantic_profile
+    path: "kontext/memory/hot/semantic_profile.md"
+    role: "memory_hot"
+    priority: 1
+    load_policy: "always"
+    max_tokens: 700
+    cache: false
+
+  - id: procedural_archive
+    path: "kontext/memory/cold/procedural_archive.md"
+    role: "memory_cold"
+    priority: 3
+    load_policy: "on_demand"
+    trigger_keywords: ["workflow", "prozess", "routine", "anti-pattern"]
+    max_tokens: 1500
+    cache: true
+    summary_path: ".pi/cache/summaries/procedural_archive.summary.md"
+
+  - id: episodic_archive
+    path: "kontext/memory/cold/episodic_archive.md"
+    role: "memory_cold"
+    priority: 3
+    load_policy: "on_demand"
+    trigger_keywords: ["verlauf", "historie", "session", "ereignis"]
+    max_tokens: 1500
+    cache: true
+    summary_path: ".pi/cache/summaries/episodic_archive.summary.md"
+
+  - id: decisions_archive
+    path: "kontext/memory/cold/decisions_archive.md"
+    role: "memory_cold"
+    priority: 3
+    load_policy: "on_demand"
+    trigger_keywords: ["entscheidung", "adr", "begründung"]
+    max_tokens: 1500
+    cache: true
+    summary_path: ".pi/cache/summaries/decisions_archive.summary.md"
+
+  - id: reasoning_catalog
+    path: "harness/reasoning/reasoning_catalog.yaml"
+    role: "reasoning_reference"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["reasoning_selection", "agent_factory", "pipeline_start"]
+    max_tokens: 1200
+    cache: true
+
+  - id: reasoning_routing
+    path: "harness/reasoning/reasoning_routing.yaml"
+    role: "reasoning_router"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["reasoning_selection", "agent_factory", "pipeline_start"]
+    max_tokens: 1400
+    cache: true
+
+  - id: reasoning_protocol
+    path: "kontext/reasoning/REASONING_PROTOCOL.md"
+    role: "reasoning_protocol"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["reasoning_output", "validation", "agent_handoff"]
+    max_tokens: 900
+    cache: true
+
+  - id: reasoning_reference
+    path: "kontext/reasoning/reasoning.md"
+    role: "reasoning_human_reference"
+    priority: 3
+    load_policy: "on_demand"
+    trigger_keywords: ["reasoning", "denkmodell", "methode"]
+    max_tokens: 1200
+    cache: true
+
+  - id: reasoning_index
+    path: "kontext/reasoning/reasoning_index.md"
+    role: "reasoning_human_index"
+    priority: 3
+    load_policy: "on_demand"
+    trigger_keywords: ["routing", "reasoning index", "task-typ"]
+    max_tokens: 1000
+    cache: true
+
+  - id: performance_gate
+    path: "validation/performance-gate.yaml"
+    role: "validation_gate"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["ZEN VALIDATE", "performance_gate", "budget_check"]
+    max_tokens: 1600
+    cache: true
+
+  - id: pipeline_p1
+    path: "harness/pipelines/p1.yaml"
+    role: "pipeline"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["ZEN P1"]
+    max_tokens: 900
+    cache: true
+
+  - id: pipeline_p2
+    path: "harness/pipelines/p2.yaml"
+    role: "pipeline"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["ZEN P2"]
+    max_tokens: 1100
+    cache: true
+
+  - id: pipeline_p3
+    path: "harness/pipelines/p3.yaml"
+    role: "pipeline"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["ZEN P3", "P3_GATE", "FORCE_GATE"]
+    max_tokens: 1800
+    cache: true
+
+  - id: agent_prompt_engineer
+    path: "agents/system/prompt-engineer.agent.md"
+    role: "agent_definition"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["P3_PROMPT_BRIEF", "PROMPT_ENGINEER_START"]
+    max_tokens: 1600
+    cache: true
+
+  - id: agent_tasklist
+    path: "agents/system/tasklist.agent.md"
+    role: "agent_definition"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["P3_TASKLIST", "TASKLIST_START"]
+    max_tokens: 1600
+    cache: true
+
+  - id: agent_rubber_duck
+    path: "agents/system/rubber-duck.agent.md"
+    role: "agent_definition"
+    priority: 2
+    load_policy: "trigger"
+    triggers: ["P3_GATE", "FORCE_GATE", "RUBBER_DUCK_REVIEW"]
+    max_tokens: 1800
+    cache: true
+
+  - id: orchestrator
+    path: "core/ORCHESTRATOR.md"
+    role: "routing_reference"
+    priority: 2
+    load_policy: "summary_on_boot_full_on_trigger"
+    max_tokens: 1500
+    cache: true
+    summary_path: ".pi/cache/summaries/core_ORCHESTRATOR.summary.md"
+
+  - id: flat_memory_legacy
+    path: "kontext/memory/*.md"
+    role: "legacy_memory"
+    priority: 3
+    load_policy: "on_demand"
+    max_tokens: 1200
+    cache: true
+    note: "Vorhandene flat Memory-Dateien bleiben erhalten; Hot/Cold Memory ist bevorzugt."

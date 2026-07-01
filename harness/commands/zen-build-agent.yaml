@@ -1,0 +1,47 @@
+id: zen-build-agent
+version: 0.2.0
+status: ready
+mode: guarded
+purpose: "Projektagent aus Template spezifizieren/erzeugen; Datei-Erzeugung nur nach Mutationsfreigabe."
+run_state_transition:
+  start_from: [READY_READONLY, READY_MUTATING]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+mutation:
+  readonly_intake_allowed_from: READY_READONLY
+  readonly_intake_outputs: [agent_spec_preview, dry_run_plan]
+  persist_requires_state: READY_MUTATING
+  required_state: READY_MUTATING
+  requires_confirmation: true
+  allowed_after_gates: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+preconditions:
+  - read_before_write
+  - onboarding_gate
+  - policy_gate
+  - filesystem_gate
+  - secret_gate
+  - prompt_injection_gate
+inputs:
+  - agent_name
+  - agent_role
+  - trigger_phrases
+  - allowed_tools
+outputs:
+  - agents/{project}/{agent_name}.agent.md
+reads:
+  - agents/templates/agent_template.md
+  - agents/agent_registry.yaml
+  - harness/schemas/agent.schema.json
+writes:
+  - agents/{project}/{agent_name}.agent.md
+gates:
+  before_start: [policy_gate, onboarding_gate, placeholder_gate]
+  before_write: [filesystem_gate, secret_gate, prompt_injection_gate]
+failure_modes:
+  - invalid_agent_name: BLOCKED
+  - placeholder_unresolved: BLOCKED
+  - secret_detected: BLOCKED
+  - user_confirmation_missing: BLOCKED
+notes: "Agent-Erzeugung ist mutierend; Registry-Änderungen sind nicht Teil dieses Commands ohne separate Freigabe."

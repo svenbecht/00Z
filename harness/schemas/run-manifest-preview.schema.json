@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/run-manifest-preview.schema.json",
+  "title": "00Z P3 run manifest preview schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "project", "pipeline", "run_state", "artifact_lifecycle", "artifact_zones", "audit_log", "dry_run", "preview_only", "not_project_manifest", "redacted", "schema"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1},
+    "project": {"type": "string", "minLength": 1},
+    "pipeline": {"type": "string", "const": "p3"},
+    "run_state": {"type": "string", "enum": ["VALIDATING", "RUNNING", "BLOCKED", "DONE", "FAILED"]},
+    "artifact_lifecycle": {"type": "array", "items": {"type": "string", "enum": ["transient", "draft", "approved", "persisted", "archived", "rejected"]}},
+    "artifact_zones": {"type": "object"},
+    "audit_log": {"type": "string", "pattern": "^projects/[^/]+/p3/[^/]+/reports/AUDIT\\.jsonl$"},
+    "dry_run": {"type": "boolean", "const": true},
+    "preview_only": {"type": "boolean", "const": true},
+    "not_project_manifest": {"type": "boolean", "const": true},
+    "redacted": {"type": "boolean", "const": true},
+    "schema": {"type": "string", "const": "harness/schemas/run-manifest-preview.schema.json"}
+  }
+}

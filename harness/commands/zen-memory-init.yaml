@@ -1,0 +1,47 @@
+id: zen-memory-init
+version: 0.2.0
+status: ready
+mode: guarded
+purpose: "Hot-Memory/Projektprofil initialisieren oder prüfen; Persistenz nur nach Mutationsfreigabe."
+run_state_transition:
+  start_from: [READY_READONLY, READY_MUTATING]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+mutation:
+  readonly_intake_allowed_from: READY_READONLY
+  readonly_intake_outputs: [memory_plan, dry_run_summary]
+  persist_requires_state: READY_MUTATING
+  required_state: READY_MUTATING
+  requires_confirmation: true
+  allowed_after_gates: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+preconditions:
+  - read_before_write
+  - onboarding_gate
+  - policy_gate
+  - filesystem_gate
+  - secret_gate
+inputs:
+  - active_project
+  - memory_scope
+outputs:
+  - kontext/memory/hot/semantic_profile.md
+  - kontext/memory/hot/todos_hot.md
+  - projects/{project}/state.md
+reads:
+  - kontext/memory/hot/*.md
+  - kontext/memory/cold/*.md
+  - projects/{project}/state.md
+writes:
+  - kontext/memory/hot/semantic_profile.md
+  - kontext/memory/hot/todos_hot.md
+  - projects/{project}/state.md
+gates:
+  before_start: [policy_gate, onboarding_gate]
+  before_write: [filesystem_gate, secret_gate, prompt_injection_gate]
+failure_modes:
+  - active_project_missing: BLOCKED
+  - secret_detected: BLOCKED
+  - user_confirmation_missing: BLOCKED
+notes: "Memory-Persistenz ist mutierend und bleibt ohne READY_MUTATING blockiert."

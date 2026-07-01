@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/reasoning-routing.schema.json",
+  "title": "00Z reasoning routing schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["required", "safety", "complexity_levels", "pipeline_defaults", "routing", "fallback", "output_contract"],
+  "properties": {
+    "version": { "type": "string" },
+    "updated": { "type": "string" },
+    "purpose": { "type": "string" },
+    "required": { "type": "array", "items": { "type": "string" }, "contains": { "const": "chain_of_evidence" } },
+    "safety": {
+      "type": "object",
+      "required": ["reveal_chain_of_thought"],
+      "properties": {
+        "reveal_chain_of_thought": { "const": false },
+        "output_mode": { "type": "string" },
+        "persist_private_scratchpad": { "type": "boolean" },
+        "expose_internal_steps": { "type": "boolean" }
+      }
+    },
+    "complexity_levels": { "type": "object" },
+    "pipeline_defaults": { "type": "object" },
+    "routing": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["keywords", "default_complexity", "methods"],
+        "properties": {
+          "keywords": { "type": "array", "items": { "type": "string" } },
+          "default_complexity": { "type": "string", "enum": ["simple", "standard", "complex", "critical"] },
+          "methods": { "type": "object" }
+        }
+      }
+    },
+    "risk_escalation": { "type": "object" },
+    "fallback": { "type": "object", "required": ["complexity", "methods"] },
+    "budget_override": { "type": "object" },
+    "output_contract": { "type": "object", "required": ["schema", "require_no_chain_of_thought_disclosure"] }
+  }
+}

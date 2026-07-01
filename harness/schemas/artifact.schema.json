@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/artifact.schema.json",
+  "title": "00Z artifact lifecycle schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["lifecycle", "zones", "lifecycle_rules", "trust"],
+  "properties": {
+    "lifecycle": {
+      "type": "array",
+      "items": {"type": "string", "enum": ["transient", "draft", "approved", "persisted", "archived", "rejected"]},
+      "contains": {"const": "approved"}
+    },
+    "zones": {"type": "object"},
+    "lifecycle_rules": {"type": "object"},
+    "trust": {"type": "object"},
+    "audit_log": {"type": "string"}
+  }
+}

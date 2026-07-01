@@ -1,0 +1,199 @@
+gate: performance
+version: "1.0"
+status: active
+purpose: "Operationales Gate für Token-Budgets, Context-Loading, Cache-Fähigkeit, P3-Konsistenz und sicheres Reasoning."
+on_fail: BLOCKED
+on_warn: CONTINUE_WITH_REPORT
+
+inputs:
+  required_files:
+    - harness/runtime.yaml
+    - harness/context_manifest.yaml
+    - harness/budget_policy.yaml
+    - harness/cache_policy.yaml
+    - harness/reasoning/reasoning_catalog.yaml
+    - harness/reasoning/reasoning_routing.yaml
+    - harness/reasoning/reasoning_output.schema.json
+    - agents/agent_registry.yaml
+    - harness/pipelines/p1.yaml
+    - harness/pipelines/p2.yaml
+    - harness/pipelines/p3.yaml
+  scan_roots:
+    - harness
+    - agents
+    - adapters
+    - core
+    - kontext
+    - validation
+  exclude_paths:
+    - .git
+    - .env
+    - .env.*
+  token_estimator: "words * 1.3"
+
+budgets:
+  boot:
+    soft_tokens: 3000
+    hard_tokens: 5000
+  p1:
+    soft_tokens: 4000
+    hard_tokens: 6000
+  p2:
+    soft_tokens: 7000
+    hard_tokens: 9000
+  p3:
+    soft_tokens: 12000
+    hard_tokens: 15000
+  audit:
+    soft_tokens: 16000
+    hard_tokens: 20000
+  reasoning_output:
+    soft_tokens: 500
+    hard_tokens: 700
+  agent_handoff:
+    soft_tokens: 1500
+    hard_tokens: 1800
+  file_without_summary:
+    soft_tokens: 1200
+    hard_tokens: 3000
+
+computed_metrics:
+  boot_context_tokens:
+    source: "context_manifest.files where load_policy in ['always','boot'] and priority <= 2"
+    method: "sum estimated tokens of existing files"
+  p3_context_tokens:
+    source: "P3 pipeline + P3 agents + reasoning routing + required hot context"
+    method: "sum estimated tokens, summary-first when cacheable"
+  large_uncached_files:
+    source: "context_manifest.files"
+    method: "file_tokens > file_without_summary.soft_tokens and cache != true"
+  cold_memory_boot_loads:
+    source: "context_manifest.files where role == memory_cold"
+    method: "load_policy == always or priority < 3"
+  optional_reasoning_max:
+    source: "harness/reasoning/reasoning_routing.yaml"
+    method: "max complexity_levels.*.max_optional_methods"
+  p3_registry_alignment:
+    source: "harness/pipelines/p3.yaml + agents/agent_registry.yaml"
+    method: "all P3 step agent paths exist in registry"
+
+checks:
+  - id: required_inputs_exist
+    severity: critical
+    assert: "all inputs.required_files exist"
+    fail_condition: "any required file missing"
+    remediation: "Create or restore the missing declarative config before validation."
+
+  - id: yaml_json_parse
+    severity: critical
+    assert: "all YAML files parse and reasoning_output.schema.json parses"
+    fail_condition: "parse error"
+    remediation: "Fix syntax before running semantic checks."
+
+  - id: boot_context_soft_budget
+    severity: warning
+    assert: "boot_context_tokens <= budgets.boot.soft_tokens"
+    fail_condition: "boot_context_tokens > budgets.boot.soft_tokens"
+    remediation: "Prefer summaries, drop priority 3, avoid optional references on boot."
+
+  - id: boot_context_hard_budget
+    severity: critical
+    assert: "boot_context_tokens <= budgets.boot.hard_tokens"
+    fail_condition: "boot_context_tokens > budgets.boot.hard_tokens"
+    remediation: "Stop boot load, compact context_manifest, move noncritical files to trigger/on_demand."
+
+  - id: p3_context_hard_budget
+    severity: critical
+    assert: "p3_context_tokens <= budgets.p3.hard_tokens"
+    fail_condition: "p3_context_tokens > budgets.p3.hard_tokens"
+    remediation: "Use artifact summaries, reduce loaded agents, ask user to split scope."
+
+  - id: no_cold_memory_on_boot
+    severity: critical
+    assert: "cold_memory_boot_loads == 0"
+    fail_condition: "any memory_cold file has load_policy always or priority < 3"
+    remediation: "Set cold memory to priority 3 and load_policy on_demand."
+
+  - id: large_files_cacheable
+    severity: warning
+    assert: "large_uncached_files == 0"
+    fail_condition: "large file over soft threshold has cache != true"
+    remediation: "Add cache: true and summary_path or reduce file size."
+
+  - id: max_optional_reasoning_methods
+    severity: critical
+    assert: "optional_reasoning_max <= 3"
+    fail_condition: "any complexity level allows more than 3 optional methods"
+    remediation: "Reduce optional methods or split the task."
+
+  - id: no_chain_of_thought_disclosure
+    severity: critical
+    assert: "all reasoning/adapters/runtime set reveal_chain_of_thought == false and no exposed CoT policy"
+    fail_condition: "CoT disclosure enabled or required"
+    remediation: "Use concise rationale, evidence, assumptions, risks, validation, HITL point only."
+
+  - id: p3_no_legacy_level_alias
+    severity: critical
+    assert: "no legacy level alias in harness/adapters/agents/core/kontext/validation"
+    fail_condition: "legacy level alias found"
+    remediation: "Use P3 naming only."
+
+  - id: p3_agent_registry_alignment
+    severity: critical
+    assert: "p3_registry_alignment == true"
+    fail_condition: "P3 pipeline references agent path absent from registry"
+    remediation: "Add agent to agents/agent_registry.yaml or fix P3 step path."
+
+  - id: agent_tool_policy_declared
+    severity: critical
+    assert: "all registry agents have allowed_tools and max_tokens"
+    fail_condition: "agent missing allowed_tools or max_tokens"
+    remediation: "Declare least-privilege allowed_tools and max_tokens."
+
+  - id: placeholder_clean_non_templates
+    severity: critical
+    assert: "no unresolved placeholder markers outside templates"
+    fail_condition: "placeholder found in non-template runtime files"
+    remediation: "Resolve placeholders or move file under templates."
+
+fail_conditions:
+  critical_fail: "Any check with severity critical fails."
+  warning_only: "Warnings produce WARN report but do not block read-only validation."
+  mutation_policy: "On FAIL, do not use write/edit until user confirms remediation plan."
+
+output_report:
+  mode: integrated_into_zen_validate_report
+  integrated_check_id: performance_budget
+  standalone_path_reserved: validation/reports/performance-gate.report.md
+  required_fields: [gate, status, metrics, pass, warn, fail, remediation]
+  status_values: [PASS, WARN, FAIL]
+  format: markdown
+  required_sections:
+    - Summary
+    - Metrics
+    - PASS
+    - WARN
+    - FAIL
+    - Remediation
+  template: |
+    # Performance Gate Report
+    Status: PASS | WARN | FAIL
+
+    ## Metrics
+    - Boot tokens: <n> / soft 3000 / hard 5000
+    - P3 tokens: <n> / soft 12000 / hard 15000
+    - Max optional reasoning methods: <n> / 3
+    - Large uncached files: <n>
+    - Cold memory boot loads: <n>
+
+    ## PASS
+    - <check_id>
+
+    ## WARN
+    - <check_id>: <reason> -> <remediation>
+
+    ## FAIL
+    - <check_id>: <reason> -> <remediation>
+
+    ## Remediation
+    - <next safe action>

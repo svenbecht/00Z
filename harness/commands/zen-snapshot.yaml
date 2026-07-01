@@ -1,0 +1,41 @@
+id: zen-snapshot
+version: 0.2.0
+status: ready
+mode: guarded
+purpose: "Session-Handoff/Snapshot redigiert erzeugen; Persistenz nur nach Mutationsfreigabe."
+run_state_transition:
+  start_from: [READY_READONLY, READY_MUTATING, DONE]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+mutation:
+  readonly_intake_allowed_from: READY_READONLY
+  readonly_intake_outputs: [snapshot_preview, redaction_plan]
+  persist_requires_state: READY_MUTATING
+  required_state: READY_MUTATING
+  requires_confirmation: true
+  allowed_after_gates: [policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+preconditions:
+  - read_before_write
+  - policy_gate
+  - secret_gate
+inputs:
+  - session_summary
+  - active_project_or_scope
+outputs:
+  - prompts/snapshot/{timestamp}_snapshot.md
+reads:
+  - prompts/snapshot/snapshot_template.md
+  - projects/{project}/state.md
+  - validation/reports/zen-validate.report.md
+writes:
+  - prompts/snapshot/{timestamp}_snapshot.md
+gates:
+  before_start: [policy_gate, secret_gate]
+  before_write: [filesystem_gate, secret_gate, prompt_injection_gate]
+failure_modes:
+  - secret_detected: BLOCKED
+  - user_confirmation_missing: BLOCKED
+  - snapshot_scope_missing: BLOCKED
+notes: "Snapshots dürfen keine Secrets oder geschützten Inhalte enthalten."

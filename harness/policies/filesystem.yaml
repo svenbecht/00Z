@@ -1,0 +1,131 @@
+policy: filesystem
+version: "1.1"
+status: active
+principle: workspace_sandbox
+workspace_root: "."
+
+defaults:
+  read: deny_unless_allowed
+  write: deny_unless_allowed
+  edit: deny_unless_allowed
+  delete: deny
+
+canonicalization:
+  require_realpath: true
+  block_path_traversal: true
+  block_absolute_paths_outside_workspace: true
+  block_symlink_escape: true
+
+read_allowed:
+  - README.md
+  - SECURITY.md
+  - core/**/*.md
+  - harness/**/*.yaml
+  - harness/**/*.json
+  - harness/**/*.md
+  - validation/**/*.yaml
+  - adapters/**/*.md
+  - adapters/**/*.yaml
+  - agents/**/*.md
+  - skills/**/*.md
+  - prompts/**/*.md
+  - projects/**/*.md
+  - kontext/**/*.md
+  - tools/**/*.py
+
+write_allowed:
+  - projects/**
+  - prompts/snapshot/**
+  - agents/**
+  - skills/**
+  - docs/**
+
+executor_dry_run_policy:
+  tool: tools/zen_execute.py
+  default_mode: dry_run
+  writes_allowed: []
+  audit_preview: stdout_only
+  project_artifacts: no_write
+  p3_run_directories: no_create_in_dry_run
+
+executor_preview_report_exception:
+  actor: tools/zen_execute.py
+  decision: allow_only_for_redacted_preview_reports
+  paths:
+    - validation/reports/zen-execute.preview.json
+    - validation/reports/*.preview.json
+    - validation/reports/zen-execute.hitl-preview.json
+    - validation/reports/*.hitl-preview.json
+    - validation/reports/*.confirmation.json
+    - validation/reports/*.audit-preview.jsonl
+    - validation/reports/*.run-manifest.preview.json
+  constraints:
+    - dry_run_remains_default
+    - no_project_artifact_writes
+    - no_p3_run_directory_creation
+    - no_project_audit_append
+    - no_env_file_reads
+    - report_path_must_remain_under_validation_reports
+    - suffix_must_be_preview_json_or_hitl_preview_json
+    - audit_preview_schema_required
+    - hitl_preview_schema_required
+    - effective_confirmation_false
+    - confirmation_report_not_project_authorization
+    - audit_preview_jsonl_not_project_audit
+    - run_manifest_preview_not_project_manifest
+
+productive_project_write_boundary:
+  enabled: false
+  disabled_by_default: true
+  mode: design_only
+  adr: docs/adr/ADR-productive-write-boundary.md
+  exact_allowlist_schema: harness/schemas/project-write-allowlist.schema.json
+  atomic_audit_append_schema: harness/schemas/atomic-audit-append.schema.json
+  real_confirmation_schema: harness/schemas/real-confirmation.schema.json
+  no_project_writes_until_enabled: true
+  productive_project_writes: BLOCKED
+
+p3_artifact_write_policy:
+  lifecycle: [transient, draft, approved, persisted, archived, rejected]
+  draft_allowed_after: [READY_MUTATING, filesystem_gate, secret_gate, prompt_injection_gate, confirmation]
+  approved_allowed_after: [force_gate_APPROVED]
+  persisted_allowed_after: [approved, filesystem_gate, secret_gate, prompt_injection_gate]
+  archive_allowed_after: [explicit_user_confirmation]
+  zones:
+    draft: projects/*/p3/*/draft/**
+    approved: projects/*/p3/*/approved/**
+    reports: projects/*/p3/*/reports/**
+    archive: projects/*/p3/*/archive/**
+    rejected: projects/*/p3/*/rejected/**
+  constraints:
+    - no_secret_values
+    - no_protected_path_copy
+    - audit_event_required
+    - ready_readonly_intake_only_no_persist
+
+validator_report_write_exception:
+  actor: tools/zen_validate.py
+  decision: allow_only_for_redacted_reports
+  paths:
+    - validation/reports/zen-validate.report.md
+    - validation/reports/zen-validate.report.json
+    - validation/reports/*.report.md
+    - validation/reports/*.report.json
+  constraints:
+    - source_read_only_for_harness_sources
+    - no_secret_values_in_reports
+    - no_env_file_reads
+    - no_path_traversal
+    - report_path_must_remain_under_validation_reports
+    - check_only_writes_nothing
+
+write_requires_read_first: true
+outside_project_requires_confirmation: false
+outside_project_decision: BLOCKED
+
+protected_paths_policy: harness/policies/protected_paths.yaml
+secret_policy: harness/policies/secrets.yaml
+
+on_violation:
+  status: BLOCKED
+  message: "Filesystem access blocked by harness/policies/filesystem.yaml"

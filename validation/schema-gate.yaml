@@ -1,0 +1,69 @@
+gate: schema
+version: "1.0"
+status: active
+purpose: "Validiert YAML/JSON-Syntax, Schema-Bindings und referenzierte Konfigurationspfade."
+on_fail: BLOCKED
+
+inputs:
+  roots: [harness, validation, adapters, agents]
+  yaml_globs: ["harness/**/*.yaml", "validation/**/*.yaml", "adapters/**/*.yaml", "agents/**/*.yaml"]
+  json_globs: ["harness/**/*.json", "agents/**/*.json"]
+  schema_files:
+    manifest: harness/schemas/manifest.schema.json
+    command: harness/schemas/command.schema.json
+    pipeline: harness/schemas/pipeline.schema.json
+    policy: harness/schemas/policy.schema.json
+    agent: harness/schemas/agent.schema.json
+    skill: harness/schemas/skill.schema.json
+    reasoning_output: harness/reasoning/reasoning_output.schema.json
+
+severity: critical
+
+checks:
+  parse_yaml:
+    description: "Alle YAML-Dateien müssen syntaktisch parsebar sein."
+    fail_if: [yaml_parse_error, duplicate_required_key]
+  parse_json:
+    description: "Alle JSON-Dateien müssen syntaktisch parsebar sein."
+    fail_if: [json_parse_error]
+  schema_files_exist:
+    description: "Referenzierte Schema-Dateien müssen existieren."
+    fail_if: [missing_schema_file]
+  manifest_references_exist:
+    description: "Pfade aus harness/manifest.yaml müssen existieren."
+    source: harness/manifest.yaml
+    fail_if: [missing_referenced_path]
+  runtime_references_exist:
+    description: "Pfade aus harness/runtime.yaml müssen existieren."
+    source: harness/runtime.yaml
+    fail_if: [missing_referenced_path]
+  reasoning_schema_contract:
+    description: "Reasoning-Schema verlangt no_chain_of_thought_disclosure=true und max. 3 Methoden."
+    source: harness/reasoning/reasoning_output.schema.json
+    fail_if: [missing_no_cot_guard, selected_methods_maxItems_gt_3]
+
+cross_file_checks:
+  policy_root_complete:
+    source: harness/manifest.yaml
+    require_files_from: security.policy_root
+    required_files: [filesystem.yaml, protected_paths.yaml, secrets.yaml, network.yaml, shell.yaml, tools.yaml, prompt-injection.yaml, onboarding.yaml]
+    fail_if: [missing_policy_file]
+  reasoning_routing_present:
+    required: [harness/reasoning/reasoning_catalog.yaml, harness/reasoning/reasoning_routing.yaml, harness/reasoning/reasoning_output.schema.json]
+    fail_if: [missing_reasoning_file]
+
+fail_conditions:
+  - yaml_parse_error
+  - json_parse_error
+  - missing_schema_file
+  - missing_referenced_path
+  - missing_policy_file
+  - missing_reasoning_file
+  - missing_no_cot_guard
+  - selected_methods_maxItems_gt_3
+
+output_report:
+  path: validation/reports/schema-gate.report.md
+  required_fields: [gate, status, checked_files, failures, warnings, evidence, next_action]
+  status_values: [PASS, WARN, FAIL]
+  evidence_format: "relative_path:line_or_key"

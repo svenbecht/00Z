@@ -1,0 +1,35 @@
+id: zen-status
+version: 0.2.0
+status: ready
+mode: read-only
+purpose: "Read-only Status über Harness, Gates, aktive Projekte und nächste sichere Aktion liefern."
+run_state_transition:
+  start_from: [INIT_REQUIRED, CONFIG_INCOMPLETE, READY_READONLY, READY_MUTATING, BLOCKED, DONE, FAILED]
+  on_start: RUNNING
+  on_success: DONE
+  on_blocked: BLOCKED
+  on_failure: FAILED
+mutation:
+  required_state: null
+  allowed: false
+preconditions:
+  - read_before_write
+  - no_secret_file_reads
+inputs:
+  - optional_active_project
+outputs:
+  - status_summary
+reads:
+  - harness/manifest.yaml
+  - harness/state_machine.yaml
+  - harness/runtime.yaml
+  - validation/reports/zen-validate.report.md
+  - projects/*/state.md
+writes: []
+gates:
+  before_start: [filesystem_gate, secret_gate]
+  before_write: []
+failure_modes:
+  - missing_report: DONE_WITH_WARNING
+  - inaccessible_project_state: BLOCKED
+notes: "ZEN STATUS ist read-only und darf keine Dateien verändern."

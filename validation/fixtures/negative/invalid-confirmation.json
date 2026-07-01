@@ -1,0 +1,12 @@
+{
+  "case": "invalid-confirmation",
+  "category": "confirmation",
+  "simulated_input": {
+    "confirmation_id": "invalid-preview-id",
+    "decision": "not_approved",
+    "redacted": true
+  },
+  "expected_status": "BLOCKED",
+  "expected_reason": "real confirmation schema requirements are not satisfied",
+  "writes_performed": []
+}

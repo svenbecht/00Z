@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/policy.schema.json",
+  "title": "00Z policy schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["policy"],
+  "properties": {
+    "policy": { "type": "string", "minLength": 1 },
+    "version": { "type": "string" },
+    "status": { "type": "string", "enum": ["scaffold", "draft", "active", "stable", "deprecated"] },
+    "principle": { "type": "string" },
+    "default": { "type": ["string", "boolean"] },
+    "deny": { "type": "object" },
+    "allow": { "type": ["object", "array"] },
+    "allow_readonly": { "type": "object" },
+    "confirmation_required": { "type": "object" },
+    "protected": { "type": ["array", "object"] },
+    "on_violation": { "type": ["object", "string"] },
+    "on_detection": { "type": ["object", "string"] },
+    "enforcement": { "type": "object" },
+    "states": { "type": "object" },
+    "on_failure": { "type": ["object", "string"] }
+  },
+  "anyOf": [
+    { "required": ["deny"] },
+    { "required": ["allow"] },
+    { "required": ["protected"] },
+    { "required": ["enforcement"] },
+    { "required": ["on_violation"] },
+    { "required": ["on_detection"] },
+    { "required": ["default"] },
+    { "required": ["states"] },
+    { "required": ["on_failure"] }
+  ]
+}

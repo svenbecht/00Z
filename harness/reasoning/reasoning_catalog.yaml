@@ -1,0 +1,89 @@
+version: "1.1"
+updated: "2026-05-21"
+purpose: "Expert-Level Katalog sicherer Reasoning-Methoden mit Kosten-, Risiko- und Ausgabeprofil"
+
+safety:
+  reveal_chain_of_thought: false
+  persist_private_scratchpad: false
+  externalize_only:
+    - decision_summary
+    - concise_rationale
+    - evidence
+    - assumptions
+    - risks
+    - validation_summary
+    - hitl_point
+  forbidden_outputs:
+    - hidden_chain_of_thought
+    - private_scratchpad
+    - exhaustive_internal_reasoning
+    - token_by_token_derivation
+  safe_replacement: "Kurze, prüfbare Begründung mit Evidenz statt interner Gedankengänge."
+
+mandatory:
+  chain_of_evidence:
+    behavior: "Wichtige Behauptungen mit Datei, Artefakt, Schema, Policy oder Tool-Output belegen."
+    cost: low
+    output_visibility: brief
+    max_evidence_items: 5
+  react_mode:
+    behavior: "Reason/Act/Observe nur als interner Steuerungsrahmen; extern Status, Entscheidung und Beobachtung knapp zusammenfassen."
+    cost: medium
+    output_visibility: summary_only
+
+methods:
+  decomposition:
+    behavior: "Aufgabe in maximal 5 prüfbare Teilschritte mit klaren Outputs zerlegen."
+    best_for: [implementation, workflow, migration, p3_tasking]
+    cost: low
+    max_output_tokens: 120
+  plan_and_solve:
+    behavior: "Erst knappen Plan erstellen, dann ausführen; Plan maximal 5 Schritte, keine langen Herleitungen."
+    best_for: [implementation, structured_task, scaffold]
+    cost: low
+    max_output_tokens: 150
+  step_back:
+    behavior: "Übergeordnetes Prinzip oder Zielkriterium kurz klären, dann konkrete Aufgabe lösen."
+    best_for: [analysis, architecture, debugging, policy_design]
+    cost: low
+    max_output_tokens: 120
+  verification:
+    behavior: "Ergebnis gegen Ziel, Constraints, Budget, Security und Evidenz prüfen."
+    best_for: [audit, debugging, quality_gate, schema_validation]
+    cost: medium
+    max_output_tokens: 180
+  tree_of_options:
+    behavior: "Maximal 3 Optionen vergleichen; je Option nur Nutzen/Risiko, dann Entscheidung."
+    best_for: [architecture, strategy, tradeoff]
+    cost: high
+    max_output_tokens: 220
+  meta_cognitive_summary:
+    behavior: "Konfidenz, Annahmen, Unsicherheiten und Risiken kurz markieren."
+    best_for: [high_risk, ambiguous_task, external_dependency]
+    cost: medium
+    max_output_tokens: 160
+  self_critique:
+    behavior: "Draft gegen Ziel und Risiken prüfen; höchstens 3 Verbesserungen benennen."
+    best_for: [writing, agent_design, prompt_design, policy_design]
+    cost: medium
+    max_output_tokens: 180
+  mid_trajectory_validation:
+    behavior: "Nach Meilenstein prüfen: Ziel noch gültig, Budget eingehalten, nächste Aktion sicher?"
+    best_for: [multi_step, p3, long_edit]
+    cost: medium
+    max_output_tokens: 160
+  milestone_review:
+    behavior: "Meilensteine mit Done/Blocked/Needs-HITL bewerten und Kurskorrektur vorschlagen."
+    best_for: [long_running_workflow, agent_pipeline, migration]
+    cost: high
+    max_output_tokens: 220
+  context_budget_check:
+    behavior: "Vor Kontextnachladung prüfen: Nutzen, geschätzte Tokens, Alternative Summary/Referenz."
+    best_for: [context_loading, p2, p3, audit]
+    cost: low
+    max_output_tokens: 100
+  risk_gate:
+    behavior: "Sicherheits-, Kosten- oder Qualitätsrisiko in APPROVED/REVIEW/BLOCKED klassifizieren."
+    best_for: [security_sensitive, force_gate, destructive_risk, p3]
+    cost: medium
+    max_output_tokens: 180

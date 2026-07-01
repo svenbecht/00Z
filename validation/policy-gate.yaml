@@ -1,0 +1,81 @@
+gate: policy
+version: "1.1"
+status: active
+purpose: "Validiert Vollständigkeit, Vorrang und Konsistenz der Security-Policies."
+on_fail: BLOCKED
+
+inputs:
+  policy_root: harness/policies
+  adapter_files: [adapters/pi/adapter.yaml, adapters/claude/adapter.yaml]
+  pipeline_files: [harness/pipelines/p1.yaml, harness/pipelines/p2.yaml, harness/pipelines/p3.yaml]
+  reasoning_files: [harness/reasoning/reasoning_catalog.yaml, harness/reasoning/reasoning_routing.yaml, harness/reasoning/reasoning_output.schema.json]
+
+severity: critical
+
+checks:
+  policy_files_present:
+    severity: critical
+    files: [filesystem.yaml, protected_paths.yaml, secrets.yaml, network.yaml, shell.yaml, tools.yaml, prompt-injection.yaml, onboarding.yaml]
+    under: harness/policies
+    fail_if: [missing_policy_file]
+  policy_files_active:
+    severity: high
+    require_key_value: {status: active}
+    fail_if: [inactive_policy]
+  tool_call_contract_required:
+    severity: critical
+    source: harness/policies/tools.yaml
+    required_fields: [actor, tool, intent, target_paths, risk_level, trust_zone, policy_decision]
+    fail_if: [missing_tool_contract_field]
+  protected_policy_files_not_mutated:
+    severity: critical
+    protected_paths: [harness/policies/**, validation/**, SECURITY.md]
+    mutating_tools: [write, edit, bash]
+    fail_if: [mutation_without_explicit_user_request]
+  high_risk_requires_confirmation:
+    severity: high
+    risk_levels: [high, critical]
+    requires: [user_confirmation_id]
+    fail_if: [missing_confirmation_for_high_risk]
+  pipeline_policy_alignment:
+    severity: critical
+    required_security_gates_for_p3: [onboarding_gate, policy_gate, filesystem_gate, secret_gate, prompt_injection_gate]
+    require_p3_force_gate: true
+    require_no_persist_before_force_gate: true
+    fail_if: [p3_missing_security_gate, p3_force_gate_disabled, p3_persist_before_force_gate]
+  adapter_policy_alignment:
+    severity: critical
+    require_security_sources: [SECURITY.md, harness/policies/tools.yaml, harness/policies/secrets.yaml, harness/policies/prompt-injection.yaml, validation/policy-gate.yaml, validation/placeholder-gate.yaml]
+    require_default_decision: deny_mutating
+    fail_if: [adapter_missing_security_source, adapter_allows_mutation_by_default]
+  reasoning_policy_alignment:
+    severity: critical
+    require_no_chain_of_thought_disclosure: true
+    require_external_output: concise_rationale_only
+    fail_if: [reasoning_cot_enabled, reasoning_schema_missing_guard]
+
+cross_file_checks:
+  referenced_policy_paths_exist:
+    sources: [SECURITY.md, core/BOOT_PROTOCOL.md, adapters/pi/adapter.yaml, adapters/claude/adapter.yaml, harness/manifest.yaml]
+    fail_if: [referenced_policy_missing]
+  validation_gates_exist:
+    required: [schema-gate.yaml, placeholder-gate.yaml, policy-gate.yaml, onboarding-gates.yaml, secret-gates.yaml, filesystem-gates.yaml, prompt-injection-gates.yaml, adapter-gate.yaml, pipeline-gate.yaml]
+    under: validation
+    fail_if: [missing_validation_gate]
+
+fail_conditions:
+  - missing_policy_file
+  - inactive_policy
+  - missing_tool_contract_field
+  - p3_missing_security_gate
+  - p3_force_gate_disabled
+  - adapter_missing_security_source
+  - adapter_allows_mutation_by_default
+  - reasoning_cot_enabled
+  - referenced_policy_missing
+  - missing_validation_gate
+
+output_report:
+  path: validation/reports/policy-gate.report.md
+  required_fields: [gate, status, policies_checked, cross_file_checks, failures, warnings, evidence, next_action]
+  status_values: [PASS, WARN, FAIL]

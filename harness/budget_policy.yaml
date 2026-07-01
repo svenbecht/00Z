@@ -1,0 +1,107 @@
+version: "1.0"
+updated: "2026-05-21"
+purpose: "Token-/Kostenbudgets und Budget-Reaktionen"
+
+token_budgets:
+  boot:
+    soft: 3000
+    hard: 5000
+  p1:
+    soft: 4000
+    hard: 6000
+  p2:
+    soft: 7000
+    hard: 9000
+  p3:
+    soft: 12000
+    hard: 15000
+  audit:
+    soft: 16000
+    hard: 20000
+  agent_handoff:
+    soft: 1200
+    hard: 1800
+  reasoning_output:
+    soft: 400
+    hard: 700
+  file_without_summary:
+    soft: 1200
+    hard: 3000
+
+budget_actions:
+  on_soft_limit:
+    - prefer_summaries
+    - drop_priority_3_context
+    - avoid_cold_memory
+    - ask_before_loading_large_files
+  on_hard_limit:
+    - stop_loading_context
+    - produce_compact_summary
+    - ask_user_to_narrow_scope
+    - defer_noncritical_validation
+
+cost_controls:
+  default_reasoning_depth: "standard"
+  avoid_full_archives_on_boot: true
+  avoid_duplicate_artifact_context: true
+  handoff_by_reference_when_possible: true
+  max_parallel_agents: 3
+  max_rework_cycles: 2
+  summarize_before_handoff: true
+  reveal_chain_of_thought: false
+  max_optional_reasoning_methods: 3
+  p3_use_artifact_summaries_first: true
+
+reasoning_budgets:
+  simple:
+    max_optional_methods: 0
+    max_tokens: 150
+  standard:
+    max_optional_methods: 1
+    max_tokens: 300
+  complex:
+    max_optional_methods: 2
+    max_tokens: 500
+  critical:
+    max_optional_methods: 3
+    max_tokens: 700
+    force_gate: true
+
+handoff_budgets:
+  prompt_engineer: 1200
+  tasklist: 1200
+  rubber_duck: 1500
+  orchestrator_synthesis: 1800
+
+performance_gate:
+  status_levels: [PASS, WARN, FAIL]
+  fail_on:
+    - boot.hard exceeded
+    - p3.hard exceeded
+    - reasoning_output.hard exceeded
+    - max_optional_reasoning_methods exceeded
+    - chain_of_thought_disclosure enabled
+    - cold_memory_loaded_on_boot
+  warn_on:
+    - boot.soft exceeded
+    - p3.soft exceeded
+    - large_uncached_file
+    - cache_hit_rate_below_target
+  report_mode: integrated_into_zen_validate_report
+  integrated_check_id: performance_budget
+  standalone_report_path_reserved: "validation/reports/performance-gate.report.md"
+  temporary_cache_report_path: "harness/.cache/performance-gate-report.md"
+
+measurement:
+  record_run_metrics: true
+  metrics_path: ".pi/cache/run_metrics.jsonl"
+  fields:
+    - timestamp
+    - command
+    - profile
+    - estimated_input_tokens
+    - estimated_output_tokens
+    - files_loaded
+    - cache_hits
+    - cache_misses
+    - budget_action

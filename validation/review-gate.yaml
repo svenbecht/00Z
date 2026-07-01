@@ -1,0 +1,57 @@
+gate: review
+version: "0.1"
+status: active
+purpose: "Validiert 00Z Reviewer-Ergebnisartefakte, Findings und Coordinator-Vorbedingungen."
+on_fail: BLOCKED
+
+inputs:
+  schema: harness/schemas/reviewer-result.schema.json
+  validator: tools/zen_review_validate.py
+  fixtures: validation/fixtures/review
+
+severity: critical
+
+checks:
+  reviewer_result_schema:
+    severity: critical
+    require_fields: [schemaVersion, reviewer, verdict, findings]
+    fail_if: [invalid_reviewer_result]
+  critical_findings_have_blocking_reason:
+    severity: critical
+    fail_if: [critical_without_blocking_reason, critical_with_low_confidence]
+  findings_are_evidence_based:
+    severity: high
+    require_fields: [title, evidence, recommendation, confidence, source, domain, fingerprint]
+    fail_if: [missing_evidence, missing_recommendation, fingerprint_mismatch]
+  file_findings_have_lines:
+    severity: high
+    fail_if: [file_without_line, line_without_file, non_positive_line]
+  no_noncritical_blocking_reason:
+    severity: medium
+    fail_if: [noncritical_with_blocking_reason]
+
+fail_conditions:
+  - invalid_reviewer_result
+  - critical_without_blocking_reason
+  - critical_with_low_confidence
+  - missing_evidence
+  - missing_recommendation
+  - fingerprint_mismatch
+  - file_without_line
+  - line_without_file
+  - non_positive_line
+
+review_domains:
+  allowed: [security, code-quality, docs, pipeline, reasoning]
+
+finding_rules:
+  verdict_values: [lgtm, suggestions, warnings, critical]
+  severity_values: [suggestion, warning, critical]
+  confidence_values: [low, medium, high]
+  source_values: [diff, file, test, manifest, contextFreshnessSignals, reviewer-inference]
+  fingerprint: "sha256(domain + file_or_manifest + line_or_0 + title + evidence).slice(0,16)"
+
+output_report:
+  path: validation/reports/review-gate.report.md
+  required_fields: [gate, status, checked_results, failures, warnings, evidence, next_action]
+  status_values: [PASS, WARN, FAIL]

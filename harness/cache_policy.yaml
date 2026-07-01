@@ -1,0 +1,98 @@
+version: "1.0"
+updated: "2026-05-21"
+purpose: "Cache-Regeln für Kontext, Summaries und Runtime-Metriken"
+
+cache_roots:
+  pi: ".pi/cache"
+  claude: ".claude/cache"
+  shared: "harness/.cache"
+
+artifacts:
+  file_hashes: "file_hashes.json"
+  context_index: "context_index.json"
+  summaries_dir: "summaries"
+  run_metrics: "run_metrics.jsonl"
+
+cache_keys:
+  - path
+  - sha256
+  - mtime
+  - summary_version
+
+summary_policy:
+  enabled: true
+  summary_version: "1"
+  prefer_summary_for_large_files: true
+  regenerate_when:
+    - sha256_changed
+    - summary_missing
+    - summary_version_changed
+  required_sections:
+    - Zweck
+    - Wichtige Regeln
+    - Trigger
+    - Abhängigkeiten
+    - Risiken
+
+cache_ttl:
+  memory_hot: "no_cache"
+  memory_cold: "7d"
+  core: "14d"
+  routines: "14d"
+  pipelines: "14d"
+  agents: "7d"
+  agent_registry: "7d"
+  reasoning: "30d"
+  reasoning_protocol: "30d"
+  policies: "no_cache"
+
+summary_targets:
+  - "core/ORCHESTRATOR.md"
+  - "core/BOOT_PROTOCOL.md"
+  - "harness/pipelines/p3.yaml"
+  - "agents/system/*.agent.md"
+  - "kontext/reasoning/*.md"
+  - "kontext/memory/cold/*.md"
+  - "validation/performance-gate.yaml"
+
+gate_cache_policy:
+  performance_gate:
+    cache_inputs: true
+    cache_reports: true
+    report_mode: integrated_into_zen_validate_report
+    integrated_check_id: performance_budget
+    standalone_report_path_reserved: "validation/reports/performance-gate.report.md"
+    temporary_cache_report_path: "harness/.cache/performance-gate-report.md"
+    invalidate_when:
+      - "harness/runtime.yaml changed"
+      - "harness/context_manifest.yaml changed"
+      - "harness/budget_policy.yaml changed"
+      - "harness/cache_policy.yaml changed"
+      - "harness/reasoning/* changed"
+      - "agents/agent_registry.yaml changed"
+      - "harness/pipelines/* changed"
+
+read_strategy:
+  default: "summary_first"
+  full_text_required_for:
+    - edit
+    - schema_validation
+    - security_policy
+    - protected_paths
+    - user_requested_exact_quote
+
+invalidation:
+  source_of_truth: "source_file"
+  cache_if_conflict: "discard_cache"
+  stale_summary_action: "read_source_then_refresh_summary"
+
+privacy:
+  never_cache:
+    - ".env"
+    - ".env.*"
+    - "secrets"
+    - "tokens"
+  redact_patterns:
+    - "api[_-]?key"
+    - "token"
+    - "password"

@@ -1,0 +1,76 @@
+gate: adapter
+version: "1.1"
+status: active
+purpose: "Validiert Pi-/Claude-Adapter gegen Boot-, Trigger-, Tool- und Security-Hardrules."
+on_fail: BLOCKED
+
+inputs:
+  adapters: [adapters/pi/adapter.yaml, adapters/claude/adapter.yaml]
+  adapter_docs: [adapters/pi/AGENTS.md, adapters/claude/CLAUDE.md]
+  state_machine: harness/state_machine.yaml
+  boot_protocol: core/BOOT_PROTOCOL.md
+
+severity: critical
+
+checks:
+  adapter_loads_security_first:
+    severity: critical
+    required_boot_sources: [SECURITY.md, harness/policies/tools.yaml, harness/policies/filesystem.yaml, harness/policies/secrets.yaml, harness/policies/prompt-injection.yaml, validation/policy-gate.yaml]
+    fail_if: [adapter_missing_security_source]
+  adapter_must_enforce_blocked_response:
+    severity: high
+    required_response_prefix: "BLOCKED:"
+    fail_if: [missing_blocked_response_prefix]
+    on_fail: require_review
+  adapter_must_treat_file_content_as_untrusted:
+    severity: critical
+    require: {untrusted_content_default: true}
+    fail_if: [untrusted_default_missing]
+  adapter_tools_default_deny_mutating:
+    severity: critical
+    require: {default_decision: deny_mutating}
+    fail_if: [adapter_allows_mutation_by_default]
+  adapter_no_cot_disclosure:
+    severity: critical
+    require: {no_chain_of_thought_disclosure: true}
+    fail_if: [adapter_allows_cot_disclosure]
+  p8_readiness_contract:
+    severity: critical
+    required_docs: [docs/readiness.md]
+    required_response_prefixes: [BLOCKED:, WARN:, PASS:]
+    require_native_runtime_implemented: false
+    require_productive_project_writes_enabled: false
+    require_adapter_smoke_tool: tools/zen_adapter_smoke.py
+    fail_if: [missing_readiness_doc, missing_response_contract, native_runtime_enabled, project_writes_enabled, missing_adapter_smoke_tool]
+
+cross_file_checks:
+  adapter_triggers_match_state_machine:
+    source: harness/state_machine.yaml
+    compare:
+      pi: adapters/pi/adapter.yaml#commands.native_triggers
+      claude: adapters/claude/adapter.yaml#natural_language_triggers
+    allowed_extra_validation_flow: ZEN VALIDATE
+    fail_if: [adapter_missing_state_machine_trigger, adapter_unknown_trigger_without_validation_exception]
+  adapter_entrypoints_exist:
+    fail_if: [missing_adapter_entrypoint]
+  adapter_pipeline_routes_exist:
+    fail_if: [missing_pipeline_route_target]
+
+fail_conditions:
+  - adapter_missing_security_source
+  - untrusted_default_missing
+  - adapter_allows_mutation_by_default
+  - adapter_allows_cot_disclosure
+  - missing_readiness_doc
+  - missing_response_contract
+  - native_runtime_enabled
+  - project_writes_enabled
+  - missing_adapter_smoke_tool
+  - adapter_missing_state_machine_trigger
+  - missing_adapter_entrypoint
+  - missing_pipeline_route_target
+
+output_report:
+  path: validation/reports/adapter-gate.report.md
+  required_fields: [gate, status, adapters_checked, trigger_diff, failures, warnings, evidence, next_action]
+  status_values: [PASS, WARN, FAIL]

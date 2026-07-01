@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/adapter.schema.json",
+  "title": "00Z adapter schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["adapter", "entrypoint", "language", "boot", "security", "tools"],
+  "properties": {
+    "adapter": { "type": "string", "enum": ["pi", "claude", "copilot"] },
+    "entrypoint": { "$ref": "#/$defs/path" },
+    "supports_slash_commands": { "type": "boolean" },
+    "supports_extensions": { "type": "boolean" },
+    "language": { "type": "string", "enum": ["de", "en", "de+en"] },
+    "boot": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": { "$ref": "#/$defs/path" },
+        "security_sources": { "type": "array", "items": { "$ref": "#/$defs/path" } }
+      }
+    },
+    "security": { "type": "object" },
+    "context_management": { "type": "object" },
+    "reasoning": { "type": "object" },
+    "tools": {
+      "type": "object",
+      "properties": {
+        "prefer": { "type": "array", "items": { "type": "string" } },
+        "gated": { "type": "array", "items": { "type": "string" } },
+        "restrict": { "type": "array", "items": { "type": "string" } },
+        "default_decision": { "type": "string" }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "properties": {
+        "native_triggers": { "type": "array", "items": { "type": "string" } },
+        "pipeline_routes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/path" } }
+      }
+    },
+    "natural_language_triggers": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } },
+    "pipeline_routes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/path" } }
+  },
+  "$defs": {
+    "path": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|\\.\\.)" } }
+  }
+}

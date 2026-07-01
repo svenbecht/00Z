@@ -1,0 +1,9 @@
+{
+  "case": "audit-append-violation",
+  "category": "audit",
+  "simulated_target_path": "projects/sample/p3/run-001/reports/AUDIT.jsonl",
+  "simulated_violation": "rewrite_existing_events_or_unredacted_payload",
+  "expected_status": "BLOCKED",
+  "expected_reason": "audit operation must be atomic append-only and redacted",
+  "writes_performed": []
+}

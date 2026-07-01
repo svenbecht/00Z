@@ -1,0 +1,76 @@
+policy: protected_paths
+version: "1.1"
+status: active
+principle: protected_paths_are_not_agent_writable
+
+no_write:
+  - core/SOUL.md
+  - SECURITY.md
+  - .env
+  - .env.*
+  - .git/
+  - .git/**
+  - harness/policies/
+  - harness/policies/**
+  - validation/*.yaml
+  - validation/**/*.yaml
+  - validation/reports/README.md
+
+controlled_write_exceptions:
+  executor_preview_reports:
+    actor: tools/zen_execute.py
+    paths:
+      - validation/reports/zen-execute.preview.json
+      - validation/reports/*.preview.json
+      - validation/reports/zen-execute.hitl-preview.json
+      - validation/reports/*.hitl-preview.json
+      - validation/reports/*.confirmation.json
+      - validation/reports/*.audit-preview.jsonl
+      - validation/reports/*.run-manifest.preview.json
+    constraints:
+      - redacted_preview_only
+      - no_secret_values
+      - no_project_artifacts
+      - no_project_audit_append
+      - suffix_must_be_preview_json_or_hitl_preview_json
+      - effective_confirmation_false_for_hitl_preview
+      - confirmation_report_not_project_authorization
+      - audit_preview_jsonl_not_project_audit
+      - run_manifest_preview_not_project_manifest
+  validator_reports:
+    actor: tools/zen_validate.py
+    paths:
+      - validation/reports/zen-validate.report.md
+      - validation/reports/zen-validate.report.json
+      - validation/reports/*.report.md
+      - validation/reports/*.report.json
+    constraints:
+      - redacted_reports_only
+      - no_secret_values
+      - no_source_mutation
+      - check_only_writes_nothing
+
+no_read:
+  - .env
+  - .env.*
+  - .git/**
+
+requires_explicit_confirmation:
+  - core/ORCHESTRATOR.md
+  - core/BOOT_PROTOCOL.md
+  - harness/state_machine.yaml
+  - harness/runtime.yaml
+  - adapters/pi/AGENTS.md
+  - adapters/claude/CLAUDE.md
+
+never_modify_by_agent:
+  - harness/policies/protected_paths.yaml
+  - harness/policies/secrets.yaml
+  - harness/policies/tools.yaml
+
+allowed_template_exception:
+  - .env.example
+
+on_violation:
+  status: BLOCKED
+  message: "Protected path access blocked by harness/policies/protected_paths.yaml"

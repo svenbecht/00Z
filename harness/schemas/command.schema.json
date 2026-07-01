@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://00z.local/schemas/command.schema.json",
+  "title": "00Z command schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["id", "version", "status", "mode", "preconditions", "outputs"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^zen-[a-z0-9-]+$" },
+    "version": { "type": "string" },
+    "status": { "type": "string", "enum": ["scaffold", "draft", "ready", "implemented", "active", "stable", "deprecated"] },
+    "mode": { "type": "string", "enum": ["guarded", "read-only", "source-read-only", "interactive", "dry-run"] },
+    "preconditions": { "type": "array", "items": { "type": "string" } },
+    "inputs": { "type": "array", "items": { "type": ["string", "object"] } },
+    "outputs": { "type": "array", "items": { "type": ["string", "object"] } },
+    "writes": { "type": "array", "items": { "$ref": "#/$defs/path" } },
+    "reads": { "type": "array", "items": { "$ref": "#/$defs/path" } },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "path": { "type": "string", "minLength": 1, "not": { "pattern": "(^/|\\.\\.)" } }
+  }
+}
