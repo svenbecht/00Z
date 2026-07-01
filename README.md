@@ -1,6 +1,6 @@
 # 00Z — The ZEN Agent
 
-<p align="center">
+<p align="left">
   <img src="assets/00z-logo.png" alt="00Z logo" width="250">
 </p>
 
@@ -140,6 +140,6 @@ This repository is documented as an **experimental local release**. For current 
 To use or replace the logo in README:
 
 1. place the final image at `assets/00z-logo.png`
-2. use the centered `<img>` block near the top of this README
+2. use the left-aligned `<img>` block near the top of this README
 3. keep `width="250"` for a subtle GitHub README header
 
