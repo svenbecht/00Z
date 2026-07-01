@@ -1,7 +1,7 @@
 # 00Z — The ZEN Agent
 
 <p align="center">
-  <img src="assets/00z-logo.png" alt="00Z logo" width="520">
+  <img src="assets/00z-logo.png" alt="00Z logo" width="250">
 </p>
 
 **Experimental local harness template for structured AI-agent workflows with Claude and pi-agent.**
@@ -141,5 +141,5 @@ To use or replace the logo in README:
 
 1. place the final image at `assets/00z-logo.png`
 2. use the centered `<img>` block near the top of this README
-3. keep `width="520"` for a compact GitHub README header
+3. keep `width="250"` for a subtle GitHub README header
 
