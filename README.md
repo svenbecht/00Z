@@ -46,9 +46,38 @@ That makes them hard to reason about and easy to misconfigure.
 - local validation tooling (no destructive defaults)
 - explicit write-boundary design (`productive writes` stay disabled until explicit approval)
 
+## Install with curl
+
+00Z intentionally does **not** recommend `curl | bash`.
+Instead, download the installer, inspect it, and run it locally.
+Run it from the directory where you want the `00Z/` folder to be created.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/svenbecht/00Z/main/install.sh -o /tmp/00z-install.sh
+less /tmp/00z-install.sh
+bash /tmp/00z-install.sh
+cd 00Z
+```
+
+The installer only downloads and extracts the repository.
+It does **not** use `sudo`, install dependencies, or execute project code automatically.
+
+Optional: install a specific tag or into a custom directory (once tags are published):
+
+```bash
+bash /tmp/00z-install.sh --ref v0.1.0 --ref-type tag --dir ./00Z-v0.1.0
+```
+
+Then start with the read-only validation check:
+
+```bash
+cd 00Z
+PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_validate.py --check-only
+```
+
 ## Quick start
 
-From repository root:
+From repository root (after clone or install):
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_validate.py --check-only
