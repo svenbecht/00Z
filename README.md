@@ -75,12 +75,24 @@ cd 00Z
 PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_validate.py --check-only
 ```
 
+Short form, if `just` is installed:
+
+```bash
+just validate
+```
+
 ## Quick start
 
 From repository root (after clone or install):
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_validate.py --check-only
+```
+
+Short form, if `just` is installed:
+
+```bash
+just validate
 ```
 
 If this is green, your core local safety checks are passing.
