@@ -4,47 +4,56 @@
   <img src="assets/00z-logo.png" alt="00Z logo" width="250">
 </p>
 
-**Experimental local harness template for structured AI-agent workflows with Claude and pi-agent.**
+**Experimental local, security-first agent harness template for structured AI-agent workflows, with adapter contracts for Claude- and pi-agent-oriented usage.**
 
 [![Status](https://img.shields.io/badge/status-experimental-orange)](docs/readiness.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Language](https://img.shields.io/badge/lang-Python%20%2F%20YAML-green)](docs/architecture.md)
 
+> ⚠️ 00Z is experimental. It is intentionally conservative, local-first, and not production software.
+
+## Status at a glance
+
+| Area | Status |
+| --- | --- |
+| Local validation tools | Implemented |
+| Reasoning contracts | Implemented |
+| Safety/policy gates | Implemented as local checks |
+| Pi/Claude adapter contracts | Present as contracts/scaffolding |
+| Native Pi/Claude runtime | Not bundled |
+| Native LLM provider connector | Not included |
+| Productive project writes | Disabled by default |
+| Dependency installation | Not required for the first demo |
+| GitHub/deploy automation | Not included |
+
 ## In short
 
-00Z is a **security-first, local-first** agent harness template. It brings **gates, prompts, memory models, and pipeline flow** into one coherent structure so you can prototype and study AI-agent orchestration without switching to a production runtime.
+00Z is a **local-first safety harness** for experimenting with AI-agent architecture. It makes prompts, policies, reasoning, memory concepts, adapters, pipelines, and validation boundaries explicit and inspectable.
 
-> ⚠️ This is an **experimental** project. It is intentionally conservative and not production software.
+Use it to study or prototype structured AI-agent workflows without claiming a production runtime, automatic deployment flow, or native LLM provider connector.
 
-## Why 00Z exists
+## Reasoning-first safety design
 
-AI-agent projects often combine prompts, permissions, tools, and runtime rules in many places.
-That makes them hard to reason about and easy to misconfigure.
+One of 00Z's core strengths is its **explicit reasoning layer**. Reasoning is treated as a controlled quality and audit mechanism, not as hidden magic and not as chain-of-thought disclosure.
 
-00Z makes these parts explicit and inspectable:
+The repository separates reasoning into inspectable artifacts:
 
-- declarative behavior in Markdown/YAML artifacts
-- explicit safety boundaries (filesystem, prompts, secrets, tools, policies)
-- validation before mutation
-- separated planning, execution, memory, and release-readiness phases
-- lightweight adapter integration for Claude and pi-agent workflows
+- `harness/reasoning/reasoning_catalog.yaml` defines safe reasoning methods, evidence rules, budgets, and forbidden outputs.
+- `harness/reasoning/reasoning_routing.yaml` maps task types, risk levels, pipelines, and context budgets to suitable reasoning methods.
+- `harness/reasoning/reasoning_output.schema.json` defines a compact, auditable output contract for reasoning summaries.
+- `kontext/reasoning/` provides human-readable protocol and routing references.
 
-## What 00Z is **not**
+The design favors:
 
-- A finished Agent OS
-- A production API/connector platform
-- A native runtime that executes live destructive writes by default
-- An automatic deployment or GitHub publishing pipeline
+- evidence-backed answers over uncheckable internal reasoning
+- dynamic method selection based on task type and risk
+- explicit complexity levels: `simple`, `standard`, `complex`, `critical`
+- bounded outputs with token budgets and evidence limits
+- no private scratchpad persistence
+- no chain-of-thought disclosure
+- HITL points for review, escalation, or blocking decisions
 
-## Current capabilities
-
-- **YAML-first harness** with machine-readable schemas
-- **Agent and prompt templates** in Markdown
-- **Pi and Claude adapter layer**
-- **5-layer memory** concept
-- reasoning + pipeline model for structured workflows
-- local validation tooling (no destructive defaults)
-- explicit write-boundary design (`productive writes` stay disabled until explicit approval)
+In practice, 00Z aims to make reasoning **reviewable, budgeted, and safety-gated** while keeping productive writes and runtime activation disabled until explicitly approved.
 
 ## Install with curl
 
@@ -62,28 +71,15 @@ cd 00Z
 The installer only downloads and extracts the repository.
 It does **not** use `sudo`, install dependencies, or execute project code automatically.
 
-Optional: install a specific tag or into a custom directory (once tags are published):
+Optional: install a specific tag or into a custom directory once tags are published:
 
 ```bash
 bash /tmp/00z-install.sh --ref v0.1.0 --ref-type tag --dir ./00Z-v0.1.0
 ```
 
-Then start with the read-only validation check:
-
-```bash
-cd 00Z
-PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_validate.py --check-only
-```
-
-Short form, if `just` is installed:
-
-```bash
-just validate
-```
-
 ## Quick start
 
-From repository root (after clone or install):
+Run from the repository root after clone or install:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_validate.py --check-only
@@ -95,9 +91,7 @@ Short form, if `just` is installed:
 just validate
 ```
 
-If this is green, your core local safety checks are passing.
-
-Typical output:
+Typical successful output:
 
 ```text
 ZEN VALIDATE: PASS
@@ -105,11 +99,46 @@ Mode: check-only/no-write
 Summary: PASS=... WARN=... FAIL=0
 ```
 
-### Optional: read-only orientation
+Optional read-only orientation:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 tools/zen_onboarding.py --linear --no-color
 ```
+
+## What 00Z is
+
+00Z is a YAML-/Markdown-first harness template for making AI-agent workflow boundaries explicit:
+
+- declarative policies, schemas, gates, commands, and pipelines
+- local validation tools with no destructive defaults
+- reasoning contracts with evidence, risk, validation, and HITL fields
+- adapter contracts for Pi and Claude oriented workflows
+- memory and context-management concepts
+- dry-run-first execution and report boundaries
+
+## What 00Z is not
+
+00Z is **not**:
+
+- a finished Agent OS
+- a production API/connector platform
+- a native LLM provider connector
+- a native Pi or Claude runtime
+- a runtime that executes live destructive writes by default
+- an automatic deployment or GitHub publishing pipeline
+
+00Z does not currently include a native LLM provider connector. Custom LLM provider support would require a future provider-runtime layer with explicit network, secret, validation, and safety boundaries.
+
+## Current capabilities
+
+- **YAML-first harness** with machine-readable schemas
+- **Reasoning contracts** for safe, reviewable reasoning summaries
+- **Agent and prompt templates** in Markdown
+- **Pi and Claude adapter contracts** (`native_runtime_implemented: false`)
+- **5-layer memory concept** in Markdown artifacts
+- **P1/P2/P3 pipeline model** for intent, escalation, and review-oriented workflow design
+- **Local validation tooling** with `--check-only` no-write mode
+- **Explicit write-boundary design** where productive writes stay disabled until separate approval and gates exist
 
 ## Typical workflow
 
@@ -126,8 +155,8 @@ Read docs/welcome.md
 
 ```text
 core/          identity, orchestrator, boot protocol
-harness/       policies, schemas, pipelines, commands
-adapters/      Pi and Claude integration placeholders
+harness/       policies, schemas, pipelines, commands, reasoning contracts
+adapters/      Pi and Claude adapter contract placeholders
 agents/        system agents and templates
 prompts/       prompt templates and snapshots
 kontext/       memory and reasoning artifacts
@@ -143,11 +172,13 @@ docs/          public and operator documentation
 - [`docs/commands.md`](docs/commands.md)
 - [`docs/readiness.md`](docs/readiness.md)
 - [`docs/release-status.md`](docs/release-status.md)
+- [`docs/architecture.md`](docs/architecture.md)
 
 ## Safety boundaries
 
 - No production-ready runtime claims
 - No native Pi/Claude runtime activation
+- No native LLM provider connector
 - No API/connector platform claims
 - No automatic dependency installation
 - No `.env` secret read/write behavior
@@ -163,10 +194,10 @@ This repository is documented as an **experimental local release**. For current 
 
 ## Who it is for
 
-- people exploring AI-agent architecture
-- developers who want safer local AI workflows
-- reviewers and learners looking at gate-based design
-- builders creating their own harness templates
+- developers exploring AI-agent architecture
+- builders who want safer local AI workflow templates
+- reviewers and learners studying gate-based design
+- people interested in explicit reasoning, validation, and safety boundaries
 
 ## License
 
@@ -175,12 +206,3 @@ This repository is documented as an **experimental local release**. For current 
 ## About the name
 
 `00Z` is short for **The ZEN Agent**: a compact, configurable template you can adapt to your own agent workflow.
-
-## Logo optional guide
-
-To use or replace the logo in README:
-
-1. place the final image at `assets/00z-logo.png`
-2. use the left-aligned `<img>` block near the top of this README
-3. keep `width="250"` for a subtle GitHub README header
-
